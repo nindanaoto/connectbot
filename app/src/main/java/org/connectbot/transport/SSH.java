@@ -122,6 +122,7 @@ public class SSH extends AbsTransport implements ConnectionMonitor, InteractiveC
 	private boolean interactiveCanContinue = true;
 
 	private Connection connection;
+	private Connection jumpConnection;
 	private Session session;
 
 	private OutputStream stdin;
@@ -435,10 +436,168 @@ public class SSH extends AbsTransport implements ConnectionMonitor, InteractiveC
 
 	}
 
+	/**
+	 * Establish and authenticate a connection to the jump host.
+	 * This is called before connecting to the target host when ProxyJump is configured.
+	 *
+	 * @param jumpHost The jump host configuration
+	 * @return The authenticated Connection, or null if connection/authentication failed
+	 */
+	private Connection connectToJumpHost(Host jumpHost) {
+		bridge.outputLine(manager.res.getString(R.string.terminal_connecting_via_jump, jumpHost.getNickname()));
+
+		Connection jc = new Connection(jumpHost.getHostname(), jumpHost.getPort());
+
+		try {
+			if (jumpHost.getCompression()) {
+				jc.setCompression(true);
+			}
+
+			// Connect to jump host
+			jc.connect(new HostKeyVerifier());
+
+			bridge.outputLine(manager.res.getString(R.string.terminal_jump_connected, jumpHost.getNickname()));
+
+			// Authenticate to jump host
+			if (!authenticateJumpHost(jc, jumpHost)) {
+				bridge.outputLine(manager.res.getString(R.string.terminal_jump_auth_failed, jumpHost.getNickname()));
+				jc.close();
+				return null;
+			}
+
+			bridge.outputLine(manager.res.getString(R.string.terminal_jump_authenticated, jumpHost.getNickname()));
+			return jc;
+
+		} catch (IOException e) {
+			Log.e(TAG, "Failed to connect to jump host: " + jumpHost.getNickname(), e);
+			bridge.outputLine(manager.res.getString(R.string.terminal_jump_failed, jumpHost.getNickname(), e.getMessage()));
+			try {
+				jc.close();
+			} catch (Exception ignored) {
+			}
+			return null;
+		}
+	}
+
+	/**
+	 * Authenticate to a jump host connection.
+	 *
+	 * @param jc The jump host connection
+	 * @param jumpHost The jump host configuration
+	 * @return true if authentication succeeded
+	 */
+	private boolean authenticateJumpHost(Connection jc, Host jumpHost) {
+		try {
+			// Try 'none' authentication first
+			if (jc.authenticateWithNone(jumpHost.getUsername())) {
+				return true;
+			}
+
+			long pubkeyId = jumpHost.getPubkeyId();
+
+			// Try public key authentication
+			if (pubkeyId != HostConstants.PUBKEYID_NEVER &&
+					jc.isAuthMethodAvailable(jumpHost.getUsername(), AUTH_PUBLICKEY)) {
+
+				if (pubkeyId == HostConstants.PUBKEYID_ANY) {
+					// Try all in-memory keys
+					for (Entry<String, KeyHolder> entry : manager.loadedKeypairs.entrySet()) {
+						try {
+							if (jc.authenticateWithPublicKey(jumpHost.getUsername(), entry.getValue().pair)) {
+								return true;
+							}
+						} catch (Exception e) {
+							Log.d(TAG, "Jump host pubkey auth failed with key: " + entry.getKey());
+						}
+					}
+				} else {
+					// Try specific key
+					Pubkey pubkey = manager.pubkeyRepository.getByIdBlocking(pubkeyId);
+					if (pubkey != null && manager.isKeyLoaded(pubkey.getNickname())) {
+						KeyPair pair = manager.getKey(pubkey.getNickname());
+						if (pair != null) {
+							try {
+								if (jc.authenticateWithPublicKey(jumpHost.getUsername(), pair)) {
+									return true;
+								}
+							} catch (Exception e) {
+								Log.d(TAG, "Jump host specific pubkey auth failed");
+							}
+						}
+					}
+				}
+			}
+
+			// Try keyboard-interactive authentication
+			if (jc.isAuthMethodAvailable(jumpHost.getUsername(), AUTH_KEYBOARDINTERACTIVE)) {
+				try {
+					if (jc.authenticateWithKeyboardInteractive(jumpHost.getUsername(),
+							(name, instruction, numPrompts, prompt, echo) -> {
+								String[] responses = new String[numPrompts];
+								for (int i = 0; i < numPrompts; i++) {
+									boolean isPassword = echo != null && i < echo.length && !echo[i];
+									String promptPrefix = manager.res.getString(R.string.terminal_jump_prompt, jumpHost.getNickname());
+									responses[i] = TerminalBridgePromptsKt.requestStringPrompt(bridge, instruction,
+											promptPrefix + " " + prompt[i], isPassword);
+								}
+								return responses;
+							})) {
+						return true;
+					}
+				} catch (Exception e) {
+					Log.d(TAG, "Jump host keyboard-interactive auth failed", e);
+				}
+			}
+
+			// Try password authentication
+			if (jc.isAuthMethodAvailable(jumpHost.getUsername(), AUTH_PASSWORD)) {
+				String passwordPrompt = manager.res.getString(R.string.terminal_jump_password, jumpHost.getNickname());
+				String password = TerminalBridgePromptsKt.requestStringPrompt(bridge, null, passwordPrompt, true);
+				if (password != null) {
+					try {
+						if (jc.authenticateWithPassword(jumpHost.getUsername(), password)) {
+							return true;
+						}
+					} catch (Exception e) {
+						Log.d(TAG, "Jump host password auth failed", e);
+					}
+				}
+			}
+
+			return jc.isAuthenticationComplete();
+
+		} catch (Exception e) {
+			Log.e(TAG, "Error during jump host authentication", e);
+			return false;
+		}
+	}
+
 	@Override
 	public void connect() {
+		// Check if we need to connect through a jump host
+		Long jumpHostId = host.getJumpHostId();
+		if (jumpHostId != null && jumpHostId > 0) {
+			Host jumpHost = manager.hostRepository.findHostByIdBlocking(jumpHostId);
+			if (jumpHost != null) {
+				jumpConnection = connectToJumpHost(jumpHost);
+				if (jumpConnection == null) {
+					onDisconnect();
+					return;
+				}
+			} else {
+				bridge.outputLine(manager.res.getString(R.string.terminal_jump_not_found));
+				onDisconnect();
+				return;
+			}
+		}
+
 		connection = new Connection(host.getHostname(), host.getPort());
 		connection.addConnectionMonitor(this);
+
+		// If we have a jump host connection, set up the proxy
+		if (jumpConnection != null) {
+			connection.setProxyData(new JumpHostProxyData(jumpConnection));
+		}
 
 		try {
 			connection.setCompression(compression);
@@ -530,6 +689,12 @@ public class SSH extends AbsTransport implements ConnectionMonitor, InteractiveC
 		if (connection != null) {
 			connection.close();
 			connection = null;
+		}
+
+		// Close jump host connection if one was used
+		if (jumpConnection != null) {
+			jumpConnection.close();
+			jumpConnection = null;
 		}
 	}
 
