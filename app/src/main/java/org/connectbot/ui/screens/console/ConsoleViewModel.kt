@@ -37,12 +37,15 @@ data class ConsoleUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
     // Add a revision counter to force recomposition when bridge state changes
-    val revision: Int = 0
+    val revision: Int = 0,
+    // Session counts for hosts that have multiple sessions (for tab display)
+    val sessionCounts: Map<Long, Int> = emptyMap()
 )
 
 class ConsoleViewModel(
     private val terminalManager: TerminalManager?,
-    private val hostId: Long
+    private val hostId: Long,
+    private val initialSessionId: Long = -1L
 ) : ViewModel(), BridgeDisconnectedListener {
     private val _uiState = MutableStateFlow(ConsoleUiState())
     val uiState: StateFlow<ConsoleUiState> = _uiState.asStateFlow()
@@ -122,13 +125,35 @@ class ConsoleViewModel(
             bridge.addOnDisconnectedListener(this@ConsoleViewModel)
         }
 
+        // Calculate session counts for each host
+        val sessionCounts = allBridges.groupBy { it.host.id }
+            .mapValues { it.value.size }
+
         _uiState.update {
             val newBridges = filteredBridges.ifEmpty { allBridges }
-            val newIndex = if (it.currentBridgeIndex >= newBridges.size) {
+
+            // Determine the initial index
+            val newIndex = when {
+                // First time loading and we have a specific session to navigate to
+                it.bridges.isEmpty() && initialSessionId != -1L -> {
+                    newBridges.indexOfFirst { bridge -> bridge.sessionId == initialSessionId }
+                        .takeIf { idx -> idx >= 0 } ?: 0
+                }
+                // First time loading - try to find last-used session
+                it.bridges.isEmpty() && hostId != -1L -> {
+                    val lastUsed = terminalManager?.getLastUsedBridge(hostId)
+                    if (lastUsed != null) {
+                        newBridges.indexOfFirst { bridge -> bridge.sessionId == lastUsed.sessionId }
+                            .takeIf { idx -> idx >= 0 } ?: 0
+                    } else {
+                        0
+                    }
+                }
                 // Adjust index if it's now out of range
-                (newBridges.size - 1).coerceAtLeast(0)
-            } else {
-                it.currentBridgeIndex
+                it.currentBridgeIndex >= newBridges.size -> {
+                    (newBridges.size - 1).coerceAtLeast(0)
+                }
+                else -> it.currentBridgeIndex
             }
 
             // Stop loading when we have bridges, or when we're showing all bridges (hostId == -1)
@@ -143,9 +168,14 @@ class ConsoleViewModel(
                 bridges = newBridges,
                 currentBridgeIndex = newIndex,
                 isLoading = if (shouldStopLoading) false else it.isLoading,
-                error = null
+                error = null,
+                sessionCounts = sessionCounts
             )
         }
+
+        // Mark the current session as used
+        val currentBridge = _uiState.value.bridges.getOrNull(_uiState.value.currentBridgeIndex)
+        currentBridge?.let { terminalManager?.markSessionUsed(it.sessionId) }
     }
 
     override fun onDisconnected(bridge: TerminalBridge) {
@@ -164,7 +194,53 @@ class ConsoleViewModel(
     fun selectBridge(index: Int) {
         if (index in _uiState.value.bridges.indices) {
             _uiState.update { it.copy(currentBridgeIndex = index) }
+            // Mark the selected session as used
+            val bridge = _uiState.value.bridges.getOrNull(index)
+            bridge?.let { terminalManager?.markSessionUsed(it.sessionId) }
         }
+    }
+
+    /**
+     * Select a bridge by its session ID.
+     */
+    fun selectBridgeBySessionId(sessionId: Long) {
+        val index = _uiState.value.bridges.indexOfFirst { it.sessionId == sessionId }
+        if (index >= 0) {
+            selectBridge(index)
+        }
+    }
+
+    /**
+     * Get the current bridge (if any).
+     */
+    fun getCurrentBridge(): TerminalBridge? {
+        return _uiState.value.bridges.getOrNull(_uiState.value.currentBridgeIndex)
+    }
+
+    /**
+     * Open a new session to the current host.
+     */
+    fun openNewSession() {
+        val currentBridge = getCurrentBridge() ?: return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                try {
+                    terminalManager?.openConnectionForHostId(currentBridge.host.id)
+                } catch (e: Exception) {
+                    _uiState.update {
+                        it.copy(error = e.message ?: "Failed to open new session")
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Get all sessions for the current host (for switch session menu).
+     */
+    fun getSessionsForCurrentHost(): List<TerminalBridge> {
+        val currentBridge = getCurrentBridge() ?: return emptyList()
+        return _uiState.value.bridges.filter { it.host.id == currentBridge.host.id }
     }
 
     /**

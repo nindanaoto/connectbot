@@ -42,6 +42,7 @@ enum class ConnectionState {
 data class HostListUiState(
     val hosts: List<Host> = emptyList(),
     val connectionStates: Map<Long, ConnectionState> = emptyMap(),
+    val sessionCounts: Map<Long, Int> = emptyMap(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val sortedByColor: Boolean = false
@@ -137,7 +138,10 @@ class HostListViewModel(
         val states = hosts.associate { host ->
             host.id to getConnectionState(host)
         }
-        _uiState.update { it.copy(connectionStates = states) }
+        val counts = hosts.associate { host ->
+            host.id to (terminalManager?.getSessionCount(host.id) ?: 0)
+        }
+        _uiState.update { it.copy(connectionStates = states, sessionCounts = counts) }
     }
 
     private fun getConnectionState(host: Host): ConnectionState {
@@ -145,13 +149,14 @@ class HostListViewModel(
             return ConnectionState.UNKNOWN
         }
 
-        // Check if connected by nickname
-        if (terminalManager.getConnectedBridge(host.nickname) != null) {
+        // Check if any sessions are connected for this host
+        if (terminalManager.isHostConnected(host.id)) {
             return ConnectionState.CONNECTED
         }
 
-        // Check if in disconnected list by comparing nickname
-        if (terminalManager.disconnected.any { it.nickname == host.nickname }) {
+        // Check if in disconnected list by comparing id
+        @Suppress("DEPRECATION")
+        if (terminalManager.disconnected.any { it.id == host.id || it.nickname == host.nickname }) {
             return ConnectionState.DISCONNECTED
         }
 
@@ -163,6 +168,10 @@ class HostListViewModel(
         loadHosts()
     }
 
+    /**
+     * Open a new session to a host.
+     * This always creates a new session, even if sessions already exist.
+     */
     fun connectToHost(host: Host) {
         viewModelScope.launch {
             try {
@@ -180,6 +189,28 @@ class HostListViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Get the session ID of the last-used session for a host.
+     * Returns null if no sessions exist.
+     */
+    fun getLastUsedSessionId(hostId: Long): Long? {
+        return terminalManager?.getLastUsedBridge(hostId)?.sessionId
+    }
+
+    /**
+     * Check if a host has any connected sessions.
+     */
+    fun isHostConnected(hostId: Long): Boolean {
+        return terminalManager?.isHostConnected(hostId) ?: false
+    }
+
+    /**
+     * Get the number of sessions for a host.
+     */
+    fun getSessionCount(hostId: Long): Int {
+        return terminalManager?.getSessionCount(hostId) ?: 0
     }
 
     fun deleteHost(host: Host) {
