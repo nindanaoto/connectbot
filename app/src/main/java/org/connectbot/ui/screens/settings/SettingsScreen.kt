@@ -52,6 +52,7 @@ import androidx.preference.PreferenceManager
 import org.connectbot.R
 import org.connectbot.ui.ScreenPreviews
 import org.connectbot.ui.theme.ConnectBotTheme
+import org.connectbot.util.FontManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,6 +74,7 @@ fun SettingsScreen(
         onBackupkeysChange = viewModel::updateBackupkeys,
         onEmulationChange = viewModel::updateEmulation,
         onScrollbackChange = viewModel::updateScrollback,
+        onFontFamilyChange = viewModel::updateFontFamily,
         onRotationChange = viewModel::updateRotation,
         onFullscreenChange = viewModel::updateFullscreen,
         onTitleBarHideChange = viewModel::updateTitleBarHide,
@@ -105,6 +107,7 @@ fun SettingsScreenContent(
     onBackupkeysChange: (Boolean) -> Unit,
     onEmulationChange: (String) -> Unit,
     onScrollbackChange: (String) -> Unit,
+    onFontFamilyChange: (String) -> Unit,
     onRotationChange: (String) -> Unit,
     onFullscreenChange: (Boolean) -> Unit,
     onTitleBarHideChange: (Boolean) -> Unit,
@@ -193,6 +196,20 @@ fun SettingsScreenContent(
                     summary = stringResource(R.string.pref_scrollback_summary),
                     value = uiState.scrollback,
                     onValueChange = onScrollbackChange
+                )
+            }
+
+            item {
+                PreferenceCategory(title = stringResource(R.string.pref_font_category))
+            }
+
+            item {
+                ListPreference(
+                    title = stringResource(R.string.pref_fontfamily_title),
+                    summary = FontManager.getDisplayName(uiState.fontFamily),
+                    value = uiState.fontFamily,
+                    entries = FontManager.availableFonts.map { (id, name) -> name to id },
+                    onValueChange = onFontFamilyChange
                 )
             }
 
@@ -607,6 +624,7 @@ private fun SettingsScreenPreview() {
                 backupkeys = true,
                 emulation = "xterm-256color",
                 scrollback = "500",
+                fontFamily = "monospace",
                 rotation = "Default",
                 titlebarhide = false,
                 fullscreen = true,
@@ -632,6 +650,7 @@ private fun SettingsScreenPreview() {
             onBackupkeysChange = {},
             onEmulationChange = {},
             onScrollbackChange = {},
+            onFontFamilyChange = {},
             onRotationChange = {},
             onFullscreenChange = {},
             onTitleBarHideChange = {},

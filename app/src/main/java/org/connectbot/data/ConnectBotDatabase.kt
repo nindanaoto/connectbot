@@ -66,7 +66,7 @@ import org.connectbot.data.entity.Pubkey
         ColorScheme::class,
         ColorPalette::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -101,7 +101,7 @@ abstract class ConnectBotDatabase : RoomDatabase() {
                     ConnectBotDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .addMigrations(MIGRATION_LEGACY_TO_1)
+                    .addMigrations(MIGRATION_LEGACY_TO_1, MIGRATION_1_2)
                     .build()
 
                 INSTANCE = instance
@@ -128,6 +128,16 @@ abstract class ConnectBotDatabase : RoomDatabase() {
         }
 
         /**
+         * Migration from version 1 to 2.
+         * Adds font_family column to hosts table for per-host font customization.
+         */
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE hosts ADD COLUMN font_family TEXT DEFAULT NULL")
+            }
+        }
+
+        /**
          * Close the database and clear the singleton instance.
          * Used for testing purposes.
          */
@@ -149,7 +159,7 @@ abstract class ConnectBotDatabase : RoomDatabase() {
                 ConnectBotDatabase::class.java,
                 TEST_DATABASE_NAME
             )
-                .addMigrations(MIGRATION_LEGACY_TO_1)
+                .addMigrations(MIGRATION_LEGACY_TO_1, MIGRATION_1_2)
                 .fallbackToDestructiveMigration(true)
                 .allowMainThreadQueries()
                 .build()

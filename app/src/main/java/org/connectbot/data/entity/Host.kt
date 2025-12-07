@@ -93,7 +93,10 @@ data class Host(
     val scrollbackLines: Int = 140,
 
     @ColumnInfo(name = "use_ctrl_alt_as_meta_key")
-    val useCtrlAltAsMetaKey: Boolean = false
+    val useCtrlAltAsMetaKey: Boolean = false,
+
+    @ColumnInfo(name = "font_family")
+    val fontFamily: String? = null
 ) {
     /**
      * Check if this host is temporary (not saved to database).

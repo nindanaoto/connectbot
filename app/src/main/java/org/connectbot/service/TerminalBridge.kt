@@ -43,6 +43,7 @@ import org.connectbot.terminal.TerminalEmulatorFactory
 import org.connectbot.transport.AbsTransport
 import org.connectbot.transport.SSH
 import org.connectbot.transport.TransportFactory
+import org.connectbot.util.FontManager
 import org.connectbot.util.HostConstants
 
 /**
@@ -99,6 +100,9 @@ class TerminalBridge {
     private val _fontSizeFlow = MutableStateFlow(-1f)
     val fontSizeFlow: StateFlow<Float> = _fontSizeFlow.asStateFlow()
 
+    private val _typefaceFlow = MutableStateFlow(Typeface.MONOSPACE)
+    val typefaceFlow: StateFlow<Typeface> = _typefaceFlow.asStateFlow()
+
     @Deprecated("Use fontSizeFlow instead")
     private val fontSizeChangedListeners: MutableList<FontSizeChangedListener>
 
@@ -141,6 +145,13 @@ class TerminalBridge {
             hostFontSizeSp = DEFAULT_FONT_SIZE_SP
         }
         setFontSize(hostFontSizeSp.toFloat())
+
+        // Load font family - use host-specific font or fall back to global default
+        val effectiveFont = FontManager.resolveEffectiveFont(
+            host.fontFamily,
+            manager.getGlobalFontFamily()
+        )
+        loadTypeface(effectiveFont)
 
         // Load color scheme from host configuration
         val schemeId = host.colorSchemeId.toInt()
@@ -509,6 +520,20 @@ class TerminalBridge {
                     )
                 }
             }
+        }
+    }
+
+    /**
+     * Load a typeface for terminal rendering.
+     *
+     * @param fontId The font identifier to load
+     */
+    private fun loadTypeface(fontId: String) {
+        FontManager.loadFont(manager.applicationContext, fontId) { typeface ->
+            _typefaceFlow.value = typeface
+            defaultPaint.typeface = typeface
+            // Recalculate character dimensions with new font
+            setFontSize(fontSizeSp)
         }
     }
 

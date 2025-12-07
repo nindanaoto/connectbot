@@ -40,6 +40,7 @@ data class HostEditorUiState(
     val port: String = "22",
     val color: String = "gray",
     val fontSize: Int = 10,
+    val fontFamily: String? = null,
     val pubkeyId: Long = -1L,
     val availablePubkeys: List<Pubkey> = emptyList(),
     val delKey: String = "del",
@@ -98,6 +99,7 @@ class HostEditorViewModel(
                             port = host.port.toString(),
                             color = host.color ?: "gray",
                             fontSize = host.fontSize,
+                            fontFamily = host.fontFamily,
                             pubkeyId = host.pubkeyId,
                             delKey = host.delKey,
                             encoding = host.encoding,
@@ -173,6 +175,10 @@ class HostEditorViewModel(
         _uiState.update { it.copy(fontSize = value) }
     }
 
+    fun updateFontFamily(value: String?) {
+        _uiState.update { it.copy(fontFamily = value) }
+    }
+
     fun updatePubkeyId(value: Long) {
         _uiState.update { it.copy(pubkeyId = value) }
     }
@@ -235,6 +241,7 @@ class HostEditorViewModel(
                     port = state.port.toIntOrNull() ?: 22,
                     color = state.color.takeIf { it != "gray" },
                     fontSize = state.fontSize,
+                    fontFamily = state.fontFamily,
                     pubkeyId = state.pubkeyId,
                     delKey = state.delKey,
                     encoding = state.encoding,

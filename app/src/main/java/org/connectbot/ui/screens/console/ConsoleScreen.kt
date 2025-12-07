@@ -333,17 +333,8 @@ fun ConsoleScreen(
                                     .fillMaxSize()
                                     .padding(terminalPadding)
                             ) {
-                                val typeface = Typeface.MONOSPACE
-                                // TODO: Make this configurable via downloading fonts!
-//                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//                                    Typeface.CustomFallbackBuilder(
-//                                        FontFamily.Builder(
-//                                            Font.Builder(context.assets, "fonts/PowerlineExtraSymbols.ttf").build()
-//                                        ).build()
-//                                    ).setSystemFallback("monospace").build()
-//                                } else {
-//                                    Typeface.MONOSPACE
-//                                }
+                                // Use typeface from bridge (supports downloadable fonts)
+                                val typeface by bridge.typefaceFlow.collectAsState()
 
                                 Terminal(
                                     terminalEmulator = bridge.terminalEmulator,

@@ -73,6 +73,9 @@ object PreferenceConstants {
     const val CTRL_FKEYS: String = "ctrlfkeys"
     const val VOLUME_FONT: String = "volumefont"
     const val STICKY_MODIFIERS: String = "stickymodifiers"
+
+    const val FONT_FAMILY: String = "fontfamily"
+    const val FONT_FAMILY_DEFAULT: String = "monospace"
     const val YES: String = "yes"
     const val NO: String = "no"
     const val ALT: String = "alt"

@@ -33,6 +33,7 @@ data class SettingsUiState(
     val backupkeys: Boolean = false,
     val emulation: String = "xterm-256color",
     val scrollback: String = "140",
+    val fontFamily: String = "monospace",
     val rotation: String = "Default",
     val titlebarhide: Boolean = false,
     val fullscreen: Boolean = false,
@@ -66,6 +67,7 @@ class SettingsViewModel(
             backupkeys = prefs.getBoolean("backupkeys", false),
             emulation = prefs.getString("emulation", "xterm-256color") ?: "xterm-256color",
             scrollback = prefs.getString("scrollback", "140") ?: "140",
+            fontFamily = prefs.getString("fontfamily", "monospace") ?: "monospace",
             rotation = prefs.getString("rotation", "Default") ?: "Default",
             titlebarhide = prefs.getBoolean("titlebarhide", false),
             fullscreen = prefs.getBoolean("fullscreen", false),
@@ -156,6 +158,10 @@ class SettingsViewModel(
 
     fun updateScrollback(value: String) {
         updateStringPref("scrollback", value) { copy(scrollback = value) }
+    }
+
+    fun updateFontFamily(value: String) {
+        updateStringPref("fontfamily", value) { copy(fontFamily = value) }
     }
 
     fun updateStickyModifiers(value: String) {

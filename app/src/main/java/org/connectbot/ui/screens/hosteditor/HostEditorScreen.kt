@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import org.connectbot.R
 import org.connectbot.ui.ScreenPreviews
 import org.connectbot.ui.theme.ConnectBotTheme
+import org.connectbot.util.FontManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +86,7 @@ fun HostEditorScreen(
         onPortChange = viewModel::updatePort,
         onColorChange = viewModel::updateColor,
         onFontSizeChange = viewModel::updateFontSize,
+        onFontFamilyChange = viewModel::updateFontFamily,
         onPubkeyChange = viewModel::updatePubkeyId,
         onDelKeyChange = viewModel::updateDelKey,
         onEncodingChange = viewModel::updateEncoding,
@@ -113,6 +115,7 @@ fun HostEditorScreenContent(
     onPortChange: (String) -> Unit,
     onColorChange: (String) -> Unit,
     onFontSizeChange: (Int) -> Unit,
+    onFontFamilyChange: (String?) -> Unit,
     onPubkeyChange: (Long) -> Unit,
     onDelKeyChange: (String) -> Unit,
     onEncodingChange: (String) -> Unit,
@@ -329,6 +332,13 @@ fun HostEditorScreenContent(
                 onFontSizeChange = onFontSizeChange
             )
 
+            // Font family selector
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            FontFamilySelector(
+                fontFamily = uiState.fontFamily,
+                onFontFamilySelected = onFontFamilyChange
+            )
+
             // Pubkey selector
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             PubkeySelector(
@@ -506,6 +516,68 @@ private fun FontSizeSelector(
                 modifier = Modifier.padding(start = 16.dp),
                 style = androidx.compose.material3.MaterialTheme.typography.bodyLarge
             )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FontFamilySelector(
+    fontFamily: String?,
+    onFontFamilySelected: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    // Build options list: "Use global default" (null) plus all available fonts
+    val defaultOption = stringResource(R.string.hostpref_fontfamily_default) to null
+    val fontOptions = FontManager.availableFonts.map { (id, name) -> name to id }
+    val allOptions: List<Pair<String, String?>> = listOf(defaultOption) + fontOptions
+
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.hostpref_fontfamily_title),
+            style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it }
+        ) {
+            OutlinedTextField(
+                value = if (fontFamily == null) {
+                    stringResource(R.string.hostpref_fontfamily_default)
+                } else {
+                    FontManager.getDisplayName(fontFamily)
+                },
+                onValueChange = {},
+                readOnly = true,
+                singleLine = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    .fillMaxWidth()
+            )
+
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                allOptions.forEach { (label, id) ->
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            onFontFamilySelected(id)
+                            expanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
+                }
+            }
         }
     }
 }
@@ -741,6 +813,7 @@ private fun HostEditorScreenPreview() {
                 port = "22",
                 color = "blue",
                 fontSize = 12,
+                fontFamily = null,
                 pubkeyId = -1L,
                 availablePubkeys = listOf(
                     org.connectbot.data.entity.Pubkey(
@@ -773,6 +846,7 @@ private fun HostEditorScreenPreview() {
             onPortChange = {},
             onColorChange = {},
             onFontSizeChange = {},
+            onFontFamilyChange = {},
             onPubkeyChange = {},
             onDelKeyChange = {},
             onEncodingChange = {},

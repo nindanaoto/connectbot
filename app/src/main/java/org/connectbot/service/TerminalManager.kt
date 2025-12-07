@@ -339,6 +339,13 @@ class TerminalManager : Service(), BridgeDisconnectedListener, OnSharedPreferenc
 		return scrollback
 	}
 
+	fun getGlobalFontFamily(): String {
+		return prefs.getString(
+			PreferenceConstants.FONT_FAMILY,
+			PreferenceConstants.FONT_FAMILY_DEFAULT
+		) ?: PreferenceConstants.FONT_FAMILY_DEFAULT
+	}
+
     /**
 	 * Open a new connection by reading parameters from the given URI. Follows
 	 * format specified by an individual transport.

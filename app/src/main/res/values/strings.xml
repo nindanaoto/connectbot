@@ -210,6 +210,14 @@
 	<!-- Description of the scrollback size preference -->
 	<string name="pref_scrollback_summary">"Size of scrollback buffer to keep in memory for each console"</string>
 
+	<!-- The category title for font preferences -->
+	<string name="pref_font_category">"Terminal font"</string>
+
+	<!-- Name for the font family preference -->
+	<string name="pref_fontfamily_title">"Font family"</string>
+	<!-- Summary for the font family preference -->
+	<string name="pref_fontfamily_summary">"Font used for terminal display"</string>
+
 	<!-- Title of the preference used to enable or disable the back-up of pubkeys. -->
 	<string name="pref_backupkeys_title">Backup pubkeys</string>
 	<!-- Summary for the preference used to enable or disable the back-up of pubkeys. -->
@@ -343,6 +351,11 @@
 
 	<!-- Host's default font size when opening the terminal in points (pt) -->
 	<string name="hostpref_fontsize_title">"Font size (pt)"</string>
+
+	<!-- Host font family preference title -->
+	<string name="hostpref_fontfamily_title">"Terminal font"</string>
+	<!-- Host font family use global default option -->
+	<string name="hostpref_fontfamily_default">"Use global default"</string>
 
 	<!-- Host pubkey usage preference title -->
 	<string name="hostpref_pubkeyid_title">"Use pubkey authentication"</string>
