@@ -315,8 +315,10 @@ class HostListViewModel @Inject constructor(
     }
 
     fun disconnectHost(host: Host) {
-        val bridge = terminalManager?.bridgesFlow?.value?.find { it.host.id == host.id }
-        bridge?.dispatchDisconnect(DisconnectReason.USER_REQUESTED)
+        val bridges = terminalManager?.bridgesFlow?.value?.filter { it.host.id == host.id } ?: emptyList()
+        bridges.forEach { bridge ->
+            bridge.dispatchDisconnect(DisconnectReason.USER_REQUESTED)
+        }
     }
 
     fun clearError() {
