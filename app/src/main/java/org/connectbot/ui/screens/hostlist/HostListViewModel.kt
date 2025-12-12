@@ -158,8 +158,8 @@ class HostListViewModel @Inject constructor(
     private fun getConnectionState(host: Host): ConnectionState {
         val manager = terminalManager ?: return ConnectionState.UNKNOWN
 
-        // Check if connected by ID
-        if (manager.bridgesFlow.value.any { it.host.id == host.id }) {
+        // Check if any sessions are connected for this host
+        if (manager.isHostConnected(host.id)) {
             return ConnectionState.CONNECTED
         }
 

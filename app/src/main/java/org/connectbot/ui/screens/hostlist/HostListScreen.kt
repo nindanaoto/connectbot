@@ -137,7 +137,10 @@ fun HostListScreen(
         onDeleteHost = viewModel::deleteHost,
         onDisconnectHost = viewModel::disconnectHost,
         onDisconnectAll = viewModel::disconnectAll,
-        onOpenNewSession = viewModel::connectToHost,
+        onOpenNewSession = { host ->
+            viewModel.connectToHost(host)
+            onNavigateToConsole(host)
+        },
         modifier = modifier
     )
 }
@@ -305,8 +308,8 @@ fun HostListScreenContent(
                             HostListItem(
                                 host = host,
                                 connectionState = uiState.connectionStates[host.id] ?: ConnectionState.UNKNOWN,
-                                makingShortcut = makingShortcut,
                                 sessionCount = uiState.sessionCounts[host.id] ?: 0,
+                                makingShortcut = makingShortcut,
                                 onClick = {
                                     if (makingShortcut) {
                                         onShortcutSelected(host)
@@ -343,8 +346,8 @@ fun HostListScreenContent(
 private fun HostListItem(
     host: Host,
     connectionState: ConnectionState,
-    makingShortcut: Boolean = false,
     sessionCount: Int = 0,
+    makingShortcut: Boolean = false,
     onClick: () -> Unit,
     onEdit: () -> Unit,
     onPortForwards: () -> Unit,
@@ -454,98 +457,100 @@ private fun HostListItem(
                 }
             },
             trailingContent = {
-                Box {
-                    IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.button_host_options))
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        // Show "Open new session" option for connected hosts
-                        if (isConnected) {
+                if (!makingShortcut) {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.button_host_options))
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            // Show "Open new session" option for connected hosts
+                            if (isConnected) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.list_host_new_session)) },
+                                    onClick = {
+                                        showMenu = false
+                                        onOpenNewSession()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.Default.OpenInNew, null)
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
-                                text = { Text(stringResource(R.string.list_host_new_session)) },
+                                text = { Text(stringResource(R.string.list_host_edit)) },
                                 onClick = {
                                     showMenu = false
-                                    onOpenNewSession()
+                                    onEdit()
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.OpenInNew, null)
+                                    Icon(Icons.Default.Edit, null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.list_host_portforwards)) },
+                                onClick = {
+                                    showMenu = false
+                                    onPortForwards()
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Link, null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.list_host_disconnect)) },
+                                onClick = {
+                                    showMenu = false
+                                    showDisconnectDialog = true
+                                },
+                                enabled = connectionState == ConnectionState.CONNECTED,
+                                leadingIcon = {
+                                    Icon(Icons.Default.LinkOff, null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.list_host_delete)) },
+                                onClick = {
+                                    showMenu = false
+                                    showDeleteDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Delete, null)
                                 }
                             )
                         }
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.list_host_edit)) },
-                            onClick = {
-                                showMenu = false
-                                onEdit()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Edit, null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.list_host_portforwards)) },
-                            onClick = {
-                                showMenu = false
-                                onPortForwards()
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Link, null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.list_host_disconnect)) },
-                            onClick = {
-                                showMenu = false
-                                showDisconnectDialog = true
-                            },
-                            enabled = connectionState == ConnectionState.CONNECTED,
-                            leadingIcon = {
-                                Icon(Icons.Default.LinkOff, null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.list_host_delete)) },
-                            onClick = {
-                                showMenu = false
-                                showDeleteDialog = true
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Delete, null)
-                            }
-                        )
                     }
                 }
             },
-        modifier = modifier.combinedClickable(
-            onClick = onClick,
-            onLongClick = {
-                // Show context menu on long press for connected hosts
-                if (isConnected) {
-                    showLongPressMenu = true
+            modifier = modifier.combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    // Show context menu on long press for connected hosts (when not making shortcut)
+                    if (isConnected && !makingShortcut) {
+                        showLongPressMenu = true
+                    }
                 }
-            }
+            )
         )
-    )
 
-    // Long-press context menu
-    DropdownMenu(
-        expanded = showLongPressMenu,
-        onDismissRequest = { showLongPressMenu = false }
-    ) {
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.list_host_new_session)) },
-            onClick = {
-                showLongPressMenu = false
-                onOpenNewSession()
-            },
-            leadingIcon = {
-                Icon(Icons.Default.OpenInNew, null)
-            }
-        )
-    }
+        // Long-press context menu
+        DropdownMenu(
+            expanded = showLongPressMenu,
+            onDismissRequest = { showLongPressMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.list_host_new_session)) },
+                onClick = {
+                    showLongPressMenu = false
+                    onOpenNewSession()
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.OpenInNew, null)
+                }
+            )
+        }
     }
     HorizontalDivider()
 

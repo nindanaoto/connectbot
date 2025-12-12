@@ -291,12 +291,28 @@ fun ConsoleScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 uiState.bridges.forEachIndexed { index, bridge ->
+                    // Calculate session number for this bridge
+                    val hostId = bridge.host.id
+                    val sessionCount = uiState.sessionCounts[hostId] ?: 1
+                    val sessionNumber = if (sessionCount > 1) {
+                        // Find session number among bridges for this host
+                        val bridgesForHost = uiState.bridges.filter { it.host.id == hostId }
+                        bridgesForHost.indexOfFirst { it.sessionId == bridge.sessionId } + 1
+                    } else {
+                        0 // Don't show number if only one session
+                    }
+                    val tabTitle = if (sessionNumber > 0) {
+                        "${bridge.host.nickname} #$sessionNumber"
+                    } else {
+                        bridge.host.nickname
+                    }
+
                     Tab(
                         selected = index == uiState.currentBridgeIndex,
                         onClick = { viewModel.selectBridge(index) },
                         text = {
                             Text(
-                                bridge.host.nickname,
+                                tabTitle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -501,7 +517,7 @@ fun ConsoleScreen(
                 onDismiss = { showDisconnectDialog = false },
                 onConfirm = {
                     showDisconnectDialog = false
-                    currentBridge.dispatchDisconnect(true)
+                    viewModel.disconnectAllSessionsForCurrentHost()
                 }
             )
         }
