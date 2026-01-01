@@ -463,14 +463,18 @@ private fun PubkeyListItem(
             )
         },
         leadingContent = {
+            // FIDO2 keys always show locked icon (private key is on hardware)
             val icon = when {
+                pubkey.isFido2 -> Icons.Outlined.Lock
                 pubkey.isBiometric -> Icons.Outlined.Fingerprint
                 pubkey.encrypted -> Icons.Outlined.Lock
                 else -> Icons.Outlined.LockOpen
             }
 
+            // FIDO2 keys never show loaded state (they're always "locked" on hardware)
+            val showLoaded = isLoaded && !pubkey.isFido2
             val iconModifier = when {
-                isLoaded ->
+                showLoaded ->
                     Modifier
                         .padding(2.dp)
                         .border(
@@ -480,7 +484,6 @@ private fun PubkeyListItem(
                         )
                         .clip(CircleShape)
                         .padding(4.dp)
-
                 else -> Modifier.padding(2.dp).clip(CircleShape).padding(4.dp)
             }
 
@@ -490,6 +493,7 @@ private fun PubkeyListItem(
                 Icon(
                     imageVector = icon,
                     contentDescription = when {
+                        pubkey.isFido2 -> stringResource(R.string.pubkey_fido2_description)
                         pubkey.isBiometric -> stringResource(R.string.pubkey_biometric_description_icon)
                         pubkey.encrypted -> stringResource(R.string.pubkey_encrypted_description)
                         else -> stringResource(R.string.pubkey_not_encrypted_description)
@@ -547,7 +551,7 @@ private fun PubkeyListItem(
                         enabled = !isImported,
                     )
 
-                    // Copy private key in OpenSSH format (not available for Keystore keys)
+                    // Copy private key in OpenSSH format (not available for Keystore or FIDO2 keys)
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -570,7 +574,7 @@ private fun PubkeyListItem(
                         leadingIcon = {
                             Icon(Icons.Default.ContentCopy, null)
                         },
-                        enabled = !pubkey.isBiometric,
+                        enabled = !pubkey.isBiometric && !pubkey.isFido2
                     )
 
                     // Copy private key in PEM format (for non-imported keys)
@@ -587,7 +591,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.ContentCopy, null)
                             },
-                            enabled = !pubkey.isBiometric,
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2
                         )
                     }
 
@@ -611,7 +615,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.Lock, null)
                             },
-                            enabled = !pubkey.isBiometric,
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2
                         )
                     }
 
@@ -638,7 +642,7 @@ private fun PubkeyListItem(
                         leadingIcon = {
                             Icon(Icons.Default.FileDownload, null)
                         },
-                        enabled = !pubkey.isBiometric,
+                        enabled = !pubkey.isBiometric && !pubkey.isFido2
                     )
 
                     // Export private key to file in PEM format (for non-imported keys)
@@ -655,7 +659,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.FileDownload, null)
                             },
-                            enabled = !pubkey.isBiometric,
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2
                         )
                     }
 
@@ -679,7 +683,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.Lock, null)
                             },
-                            enabled = !pubkey.isBiometric,
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2
                         )
                     }
 
@@ -697,11 +701,16 @@ private fun PubkeyListItem(
                 }
             }
         },
-        modifier = modifier.clickable {
-            onClick { targetPubkey, callback ->
-                // Show password dialog if needed
-                passwordCallback = callback
-                showPasswordDialog = true
+        // FIDO2 keys can't be "loaded" - they're always on hardware
+        modifier = if (pubkey.isFido2) {
+            modifier
+        } else {
+            modifier.clickable {
+                onClick { targetPubkey, callback ->
+                    // Show password dialog if needed
+                    passwordCallback = callback
+                    showPasswordDialog = true
+                }
             }
         },
     )
