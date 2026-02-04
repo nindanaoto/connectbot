@@ -722,6 +722,36 @@
 	<!-- Error message shown when trying to open a local shell but it's not available on the device -->
 	<string name="local_shell_unavailable">"Failure! Local shell is unavailable on this phone."</string>
 
+	<!-- Mosh transport messages -->
+	<!-- Message shown in terminal when starting Mosh connection -->
+	<string name="terminal_mosh_starting">"Starting Mosh connection…"</string>
+	<!-- Message shown in terminal when Mosh installation times out -->
+	<string name="terminal_mosh_install_timeout">"Warning: Mosh installation timed out"</string>
+	<!-- Message shown in terminal when launching mosh-server on remote host -->
+	<string name="terminal_mosh_launching_server">"Launching mosh-server on remote host…"</string>
+	<!-- Message shown in terminal when mosh-server fails to start -->
+	<string name="terminal_mosh_server_failed">"Failed to start mosh-server on remote host"</string>
+	<!-- Message shown in terminal when mosh-client fails to start -->
+	<string name="terminal_mosh_client_failed">"Failed to start mosh-client"</string>
+	<!-- Message shown in terminal when Mosh connection is established -->
+	<string name="terminal_mosh_connected">"Mosh connection established"</string>
+	<!-- Message shown in terminal when Mosh encounters an error. Parameter is the error message. -->
+	<string name="terminal_mosh_error">"Mosh error: %1$s"</string>
+
+	<!-- Mosh host editor fields -->
+	<!-- Title for the Mosh server command setting -->
+	<string name="hostpref_mosh_server_title">"Mosh server command"</string>
+	<!-- Summary for the Mosh server command setting -->
+	<string name="hostpref_mosh_server_summary">"Custom mosh-server path or command (leave blank for default)"</string>
+	<!-- Title for the Mosh UDP port setting -->
+	<string name="hostpref_mosh_port_title">"Mosh UDP port"</string>
+	<!-- Summary for the Mosh UDP port setting -->
+	<string name="hostpref_mosh_port_summary">"Fixed UDP port for mosh (0 for automatic 60000-61000 range)"</string>
+	<!-- Title for the Mosh locale setting -->
+	<string name="hostpref_locale_title">"Locale"</string>
+	<!-- Summary for the Mosh locale setting -->
+	<string name="hostpref_locale_summary">"Locale for mosh session (e.g., en_US.UTF-8)"</string>
+
 	<!-- Text sent to the user to alert them that a Terminal Bell is received in a background session -->
 	<string name="notification_text">"%1$s wants your attention."</string>
 

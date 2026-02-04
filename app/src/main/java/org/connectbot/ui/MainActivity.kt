@@ -59,6 +59,7 @@ import org.connectbot.ui.components.DisconnectAllDialog
 import org.connectbot.ui.navigation.NavDestinations
 import org.connectbot.ui.theme.ConnectBotTheme
 import org.connectbot.util.IconStyle
+import org.connectbot.util.InstallMosh
 import org.connectbot.util.NotificationPermissionHelper
 import org.connectbot.util.PreferenceConstants
 import org.connectbot.util.ShortcutIconGenerator
@@ -137,6 +138,9 @@ class MainActivity : AppCompatActivity() {
 
         val serviceIntent = Intent(this, TerminalManager::class.java)
         bindService(serviceIntent, connection, BIND_AUTO_CREATE)
+
+        // Start mosh resources installation in the background
+        InstallMosh.startInstall(this)
 
         setContent {
             val appUiState by appViewModel.uiState.collectAsState()

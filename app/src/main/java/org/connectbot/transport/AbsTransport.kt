@@ -31,8 +31,10 @@ import java.io.IOException
 abstract class AbsTransport {
     @JvmField
     var host: Host? = null
+
     @JvmField
     var bridge: TerminalBridge? = null
+
     @JvmField
     var manager: TerminalManager? = null
 
@@ -213,4 +215,42 @@ abstract class AbsTransport {
      * @return
      */
     abstract fun usesNetwork(): Boolean
+
+    /**
+     * Called when the application goes to background.
+     * Used by Mosh to signal SIGSTOP to the mosh-client process.
+     */
+    open fun onBackground() {
+        // Default: do nothing
+    }
+
+    /**
+     * Called when the application returns to foreground.
+     * Used by Mosh to signal SIGCONT to resume the mosh-client process.
+     */
+    open fun onForeground() {
+        // Default: do nothing
+    }
+
+    /**
+     * Called when the screen turns off.
+     * Used by Mosh to pause the client when screen is off.
+     */
+    open fun onScreenOff() {
+        // Default: do nothing
+    }
+
+    /**
+     * Called when the screen turns on.
+     * Used by Mosh to resume the client when screen is on.
+     */
+    open fun onScreenOn() {
+        // Default: do nothing
+    }
+
+    /**
+     * Whether this transport should reset (reconnect) on network connectivity changes.
+     * SSH returns true, Mosh returns false (Mosh handles network roaming internally).
+     */
+    open fun resetOnConnectionChange(): Boolean = true
 }

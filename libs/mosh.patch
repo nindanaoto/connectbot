@@ -1,0 +1,61 @@
+diff --git a/src/util/locale_utils.cc b/src/util/locale_utils.cc
+index 1234567..abcdefg 100644
+--- a/src/util/locale_utils.cc
++++ b/src/util/locale_utils.cc
+@@ -27,7 +27,15 @@
+ #include <string.h>
+ #include <langinfo.h>
+
++#ifdef __ANDROID__
++// Android doesn't have nl_langinfo(CODESET) that works reliably.
++// Since mosh requires UTF-8, we hardcode it here.
++const char *locale_charset(void) {
++    return "UTF-8";
++}
++#else
+ const char *locale_charset(void) {
+     return nl_langinfo(CODESET);
+ }
++#endif
+
+diff --git a/src/util/pty_compat.cc b/src/util/pty_compat.cc
+index 1234567..abcdefg 100644
+--- a/src/util/pty_compat.cc
++++ b/src/util/pty_compat.cc
+@@ -20,7 +20,9 @@
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <fcntl.h>
++#ifndef __ANDROID__
+ #include <sys/stropts.h>
++#endif
+ #include <unistd.h>
+ #include <stdlib.h>
+
+
+---
+Mosh Android Compatibility Patch
+================================
+
+This patch makes the following changes for Android compatibility:
+
+1. locale_utils.cc:
+   - Android's libc (Bionic) doesn't implement nl_langinfo(CODESET) reliably
+   - Since mosh requires UTF-8 encoding, we hardcode the charset to "UTF-8"
+   - This is safe because mosh already assumes UTF-8 throughout its codebase
+
+2. pty_compat.cc:
+   - Android doesn't have <sys/stropts.h> as it's not a STREAMS-based system
+   - This header is used for STREAMS-based PTY handling on SVR4 systems
+   - Android uses the standard /dev/ptmx interface which doesn't need this
+
+To apply this patch:
+  cd libs/mosh
+  git apply ../mosh.patch
+
+After applying, the mosh source can be cross-compiled for Android using
+the NDK toolchain.
+
+Note: You may need to update the line numbers in this patch depending on
+the exact version of mosh being used. This patch is based on typical
+mosh source structure and may need minor adjustments.

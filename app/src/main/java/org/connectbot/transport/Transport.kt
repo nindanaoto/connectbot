@@ -66,8 +66,7 @@ sealed class Transport {
         override val defaultPort = 22
         override val usesNetwork = true
 
-        override fun getFormatHint(context: Context): String =
-            SSH.getFormatHint(context)
+        override fun getFormatHint(context: Context): String = SSH.getFormatHint(context)
 
         override fun createInstance(): AbsTransport = SSH()
 
@@ -82,13 +81,11 @@ sealed class Transport {
         override val defaultPort = 23
         override val usesNetwork = true
 
-        override fun getFormatHint(context: Context): String =
-            org.connectbot.transport.Telnet.getFormatHint(context)
+        override fun getFormatHint(context: Context): String = org.connectbot.transport.Telnet.getFormatHint(context)
 
         override fun createInstance(): AbsTransport = org.connectbot.transport.Telnet()
 
-        override fun parseUri(input: String): Uri? =
-            org.connectbot.transport.Telnet.getUri(input)
+        override fun parseUri(input: String): Uri? = org.connectbot.transport.Telnet.getUri(input)
     }
 
     /**
@@ -99,13 +96,26 @@ sealed class Transport {
         override val defaultPort = 0
         override val usesNetwork = false
 
-        override fun getFormatHint(context: Context): String =
-            org.connectbot.transport.Local.getFormatHint(context)
+        override fun getFormatHint(context: Context): String = org.connectbot.transport.Local.getFormatHint(context)
 
         override fun createInstance(): AbsTransport = org.connectbot.transport.Local()
 
-        override fun parseUri(input: String): Uri? =
-            org.connectbot.transport.Local.getUri(input)
+        override fun parseUri(input: String): Uri? = org.connectbot.transport.Local.getUri(input)
+    }
+
+    /**
+     * Mosh transport - Mobile shell (uses SSH for initial connection, then UDP)
+     */
+    object Mosh : Transport() {
+        override val protocolName = "mosh"
+        override val defaultPort = 22 // SSH port for initial connection
+        override val usesNetwork = true
+
+        override fun getFormatHint(context: Context): String = org.connectbot.transport.Mosh.getFormatHint(context)
+
+        override fun createInstance(): AbsTransport = org.connectbot.transport.Mosh()
+
+        override fun parseUri(input: String): Uri? = org.connectbot.transport.Mosh.getUri(input)
     }
 
     companion object {
@@ -116,6 +126,7 @@ sealed class Transport {
         @JvmStatic
         fun fromProtocol(protocol: String?): Transport? = when (protocol) {
             "ssh" -> Ssh
+            "mosh" -> Mosh
             "telnet" -> Telnet
             "local" -> Local
             else -> null
@@ -125,7 +136,7 @@ sealed class Transport {
          * Get all available transports
          */
         @JvmStatic
-        fun allTransports(): List<Transport> = listOf(Ssh, Telnet, Local)
+        fun allTransports(): List<Transport> = listOf(Ssh, Mosh, Telnet, Local)
 
         /**
          * Get transport from a URI
