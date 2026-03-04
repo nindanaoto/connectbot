@@ -64,6 +64,7 @@ import java.net.InetSocketAddress
 import java.net.NoRouteToHostException
 import java.nio.charset.StandardCharsets
 import java.security.KeyPair
+import java.security.KeyStoreException
 import java.security.NoSuchAlgorithmException
 import java.security.PublicKey
 import java.security.interfaces.DSAPrivateKey
@@ -596,9 +597,20 @@ class SSH :
             cause is UserNotAuthenticatedException ||
             e is KeyPermanentlyInvalidatedException ||
             e is UserNotAuthenticatedException
+        val isIncompatibleDigest = cause is KeyStoreException ||
+            e is KeyStoreException
         if (isKeyInvalidated) {
             val message = manager?.res?.getString(R.string.terminal_auth_biometric_invalidated, keyNickname)
                 ?: String.format("Biometric key '%s' has been invalidated. Please generate a new key.", keyNickname)
+            Timber.e(e, message)
+            bridge?.outputLine(message)
+        } else if (isIncompatibleDigest) {
+            val message = manager?.res?.getString(R.string.terminal_auth_biometric_incompatible_digest, keyNickname)
+                ?: String.format(
+                    "Biometric key '%s' cannot sign with the algorithm required by this server. " +
+                        "The server must support rsa-sha2-256 or rsa-sha2-512 (OpenSSH 7.2+).",
+                    keyNickname
+                )
             Timber.e(e, message)
             bridge?.outputLine(message)
         } else {

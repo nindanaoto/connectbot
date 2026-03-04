@@ -708,6 +708,8 @@
 	<string name="terminal_auth_biometric">"Requesting biometric authentication for key '%1$s'"</string>
 	<!-- Message shown when a biometric key has been invalidated due to new fingerprint enrollment. Parameter is the key nickname. -->
 	<string name="terminal_auth_biometric_invalidated">"Biometric key '%1$s' has been invalidated. This can happen when new fingerprints are enrolled on the device. Please generate a new key."</string>
+	<!-- Message shown when a biometric RSA key cannot sign because the server only supports legacy ssh-rsa (SHA-1). Parameter is the key nickname. -->
+	<string name="terminal_auth_biometric_incompatible_digest">"Biometric key \'%1$s\' cannot sign with the algorithm required by this server. The server must support rsa-sha2-256 or rsa-sha2-512 (OpenSSH 7.2+). Consider using an Ed25519 or ECDSA key instead."</string>
 	<!-- Message shown in terminal when public key authentication fails. Parameter is the key nickname. -->
 	<string name="terminal_auth_pubkey_fail">"Authentication method 'publickey' with key '%1$s' failed"</string>
 
