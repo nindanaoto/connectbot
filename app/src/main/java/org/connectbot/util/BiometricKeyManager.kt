@@ -18,7 +18,6 @@
 package org.connectbot.util
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -72,10 +71,19 @@ class BiometricKeyManager @Inject constructor(
 
     /**
      * Check if Ed25519 biometric keys are supported on this device.
-     * Requires Android 13+ (TIRAMISU) with KeyMint v2 (FEATURE_HARDWARE_KEYSTORE version 200).
+     * Requires Android 13+ (TIRAMISU) and the AndroidKeyStore provider to support EdDSA.
+     * We probe the provider directly instead of relying on the FEATURE_HARDWARE_KEYSTORE version
+     * flag, which is not reliably advertised on all devices that support Ed25519 in hardware.
      */
-    fun isEd25519BiometricSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        context.packageManager.hasSystemFeature(PackageManager.FEATURE_HARDWARE_KEYSTORE, 200)
+    fun isEd25519BiometricSupported(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
+        return try {
+            KeyPairGenerator.getInstance("EdDSA", KEYSTORE_PROVIDER)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
 
     private val keyStore: KeyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).apply {
         load(null)
