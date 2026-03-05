@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.connectbot.data.PubkeyRepository
+import org.connectbot.data.entity.KeyStorageType
 import org.connectbot.data.entity.Pubkey
 import org.connectbot.di.CoroutineDispatchers
 import org.connectbot.service.TerminalManager
@@ -284,7 +285,19 @@ class PubkeyListViewModel @Inject constructor(
                         throw IllegalArgumentException("Cannot export public key from imported key")
                     }
 
-                    val pk = PubkeyUtils.decodePublic(pubkey.publicKey, pubkey.type)
+                    val pk = if (pubkey.storageType == KeyStorageType.ANDROID_KEYSTORE &&
+                        pubkey.keystoreAlias != null
+                    ) {
+                        // For Keystore-backed keys (e.g. biometric Ed25519), read the public key
+                        // directly from the Keystore instead of decoding stored bytes via KeyFactory,
+                        // since the sshlib Ed25519Provider may not handle X.509 DER format.
+                        val ks = java.security.KeyStore.getInstance("AndroidKeyStore")
+                        ks.load(null)
+                        ks.getCertificate(pubkey.keystoreAlias)?.publicKey
+                            ?: throw IllegalStateException("Key '${pubkey.nickname}' not found in Keystore")
+                    } else {
+                        PubkeyUtils.decodePublic(pubkey.publicKey, pubkey.type)
+                    }
                     PublicKeyUtils.toAuthorizedKeysFormat(pk, pubkey.nickname)
                 }
 
