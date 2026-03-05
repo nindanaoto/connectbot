@@ -18,9 +18,11 @@
 package org.connectbot.util
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import androidx.annotation.RequiresApi
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -63,9 +65,17 @@ class BiometricKeyManager @Inject constructor(
         /**
          * Check if a KeyType supports biometric protection.
          * Only RSA and EC keys can be stored in Android Keystore with biometric auth.
+         * Ed25519 support is runtime-dependent (requires Android 13+ with KeyMint v2).
          */
         fun supportsBiometric(keyType: KeyType): Boolean = keyType == KeyType.RSA || keyType == KeyType.EC
     }
+
+    /**
+     * Check if Ed25519 biometric keys are supported on this device.
+     * Requires Android 13+ (TIRAMISU) with KeyMint v2 (FEATURE_HARDWARE_KEYSTORE version 200).
+     */
+    fun isEd25519BiometricSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_HARDWARE_KEYSTORE, 200)
 
     private val keyStore: KeyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).apply {
         load(null)
@@ -246,16 +256,61 @@ class BiometricKeyManager @Inject constructor(
     }
 
     /**
+     * Generate an Ed25519 key pair in Android Keystore with biometric authentication requirement.
+     * Requires Android 13+ (TIRAMISU) with KeyMint v2.
+     *
+     * @param alias The alias to store the key under
+     * @return The public key (private key remains in Keystore)
+     */
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    fun generateEd25519Key(alias: String): PublicKey {
+        Timber.d("Generating Ed25519 key with alias: $alias")
+
+        val keyPairGenerator = KeyPairGenerator.getInstance(
+            "EdDSA",
+            KEYSTORE_PROVIDER
+        )
+
+        val builder = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_SIGN
+        ).apply {
+            // Ed25519 does not use digests or signature paddings
+            setUserAuthenticationRequired(true)
+            setUserAuthenticationParameters(
+                AUTH_VALIDITY_DURATION_SECONDS,
+                KeyProperties.AUTH_BIOMETRIC_STRONG
+            )
+            setInvalidatedByBiometricEnrollment(true)
+            // Note: Ed25519 is not supported in StrongBox — use TEE only
+        }
+
+        keyPairGenerator.initialize(builder.build())
+        val keyPair = keyPairGenerator.generateKeyPair()
+
+        Timber.d("Ed25519 key generated successfully")
+        return keyPair.public
+    }
+
+    /**
      * Generate a biometric-protected key of the specified type.
      *
      * @param alias The alias to store the key under
-     * @param keyType "RSA" or "EC"
+     * @param keyType "RSA", "EC", or "Ed25519"
      * @param keySize The key size in bits
      * @return The public key
      */
     fun generateKey(alias: String, keyType: String, keySize: Int): PublicKey = when (keyType) {
         "RSA" -> generateRsaKey(alias, keySize)
+
         "EC" -> generateEcKey(alias, keySize)
+
+        "Ed25519" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            generateEd25519Key(alias)
+        } else {
+            throw IllegalStateException("Ed25519 biometric keys require Android 13+")
+        }
+
         else -> throw IllegalArgumentException("Unsupported key type for biometric protection: $keyType")
     }
 
@@ -289,6 +344,8 @@ class BiometricKeyManager @Inject constructor(
             384 -> "SHA384withECDSA"
             else -> "SHA256withECDSA" // P-256 and any other size
         }
+
+        "Ed25519" -> "Ed25519"
 
         else -> throw IllegalArgumentException("Unsupported key type: $keyType")
     }
