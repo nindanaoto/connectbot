@@ -72,7 +72,8 @@ data class GeneratePubkeyUiState(
     // Biometric authentication options
     val useBiometric: Boolean = false,
     val biometricAvailable: Boolean = false,
-    val biometricNotEnrolled: Boolean = false
+    val biometricNotEnrolled: Boolean = false,
+    val ed25519BiometricAvailable: Boolean = false
 ) {
     val passwordMismatch: Boolean
         get() = password1 != password2 && password2.isNotEmpty()
@@ -84,7 +85,8 @@ data class GeneratePubkeyUiState(
 
     /** Whether the current key type supports biometric protection */
     val keyTypeSupportsBiometric: Boolean
-        get() = BiometricKeyManager.supportsBiometric(keyType)
+        get() = BiometricKeyManager.supportsBiometric(keyType) ||
+            (keyType == KeyType.ED25519 && ed25519BiometricAvailable)
 }
 
 @HiltViewModel
@@ -106,7 +108,8 @@ class GeneratePubkeyViewModel @Inject constructor(
         GeneratePubkeyUiState(
             ecdsaAvailable = Security.getProviders("KeyPairGenerator.EC") != null,
             biometricAvailable = biometricKeyManager.isBiometricAvailable() == BiometricAvailability.AVAILABLE,
-            biometricNotEnrolled = biometricKeyManager.isBiometricAvailable() == BiometricAvailability.NOT_ENROLLED
+            biometricNotEnrolled = biometricKeyManager.isBiometricAvailable() == BiometricAvailability.NOT_ENROLLED,
+            ed25519BiometricAvailable = biometricKeyManager.isEd25519BiometricSupported()
         )
     )
     val uiState: StateFlow<GeneratePubkeyUiState> = _uiState.asStateFlow()
@@ -152,7 +155,7 @@ class GeneratePubkeyViewModel @Inject constructor(
                 minBits = keyType.minBits,
                 maxBits = keyType.maxBits,
                 allowBitStrengthChange = allowBitStrengthChange,
-                useBiometric = if (BiometricKeyManager.supportsBiometric(keyType)) currentState.useBiometric else false
+                useBiometric = if (it.copy(keyType = keyType).keyTypeSupportsBiometric) currentState.useBiometric else false
             )
         }
     }

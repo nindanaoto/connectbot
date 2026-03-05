@@ -33,7 +33,9 @@ import com.trilead.ssh2.IpVersion
 import com.trilead.ssh2.KnownHosts
 import com.trilead.ssh2.LocalPortForwarder
 import com.trilead.ssh2.Session
+import com.trilead.ssh2.auth.SignatureProxy
 import com.trilead.ssh2.crypto.PEMDecoder
+import com.trilead.ssh2.crypto.PublicKeyUtils
 import com.trilead.ssh2.crypto.fingerprint.KeyFingerprint
 import com.trilead.ssh2.crypto.keys.Ed25519PrivateKey
 import com.trilead.ssh2.crypto.keys.Ed25519Provider
@@ -66,7 +68,9 @@ import java.nio.charset.StandardCharsets
 import java.security.KeyPair
 import java.security.KeyStoreException
 import java.security.NoSuchAlgorithmException
+import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.Signature
 import java.security.interfaces.DSAPrivateKey
 import java.security.interfaces.DSAPublicKey
 import java.security.interfaces.ECPrivateKey
@@ -446,6 +450,18 @@ class SSH :
         val pair = getOrUnlockKey(pubkey) ?: return false
 
         val currentHost = host ?: return false
+
+        // Ed25519 Keystore keys can't sign via KeyPair — need SignatureProxy
+        if (pubkey.storageType == KeyStorageType.ANDROID_KEYSTORE &&
+            PublicKeyUtils.isEd25519Key(pair.public)
+        ) {
+            return tryPublicKeyWithProxy(
+                currentHost.username,
+                pubkey.nickname,
+                KeystoreBiometricProxy(pair.public, pair.private)
+            )
+        }
+
         return tryPublicKey(currentHost.username, pubkey.nickname, pair)
     }
 
@@ -611,6 +627,31 @@ class SSH :
                         "The server must support rsa-sha2-256 or rsa-sha2-512 (OpenSSH 7.2+).",
                     keyNickname
                 )
+            Timber.e(e, message)
+            bridge?.outputLine(message)
+        } else {
+            Timber.e(e, "Public key authentication failed for '%s'", keyNickname)
+            bridge?.outputLine(manager?.res?.getString(R.string.terminal_auth_pubkey_fail, keyNickname))
+        }
+        false
+    }
+
+    @Throws(IOException::class)
+    private fun tryPublicKeyWithProxy(username: String, keyNickname: String, proxy: SignatureProxy): Boolean = try {
+        val success = connection?.authenticateWithPublicKey(username, proxy) == true
+        if (!success) {
+            bridge?.outputLine(manager?.res?.getString(R.string.terminal_auth_pubkey_fail, keyNickname))
+        }
+        success
+    } catch (e: Exception) {
+        val cause = e.cause ?: e
+        val isKeyInvalidated = cause is KeyPermanentlyInvalidatedException ||
+            cause is UserNotAuthenticatedException ||
+            e is KeyPermanentlyInvalidatedException ||
+            e is UserNotAuthenticatedException
+        if (isKeyInvalidated) {
+            val message = manager?.res?.getString(R.string.terminal_auth_biometric_invalidated, keyNickname)
+                ?: String.format("Biometric key '%s' has been invalidated. Please generate a new key.", keyNickname)
             Timber.e(e, message)
             bridge?.outputLine(message)
         } else {
@@ -1469,5 +1510,39 @@ class SSH :
             context.getString(R.string.format_hostname),
             context.getString(R.string.format_port)
         )
+    }
+}
+
+/**
+ * SignatureProxy implementation for Android Keystore-backed biometric keys.
+ * Routes signing operations through JCA Signature rather than extracting raw key material,
+ * which is impossible for hardware-backed Keystore keys.
+ */
+private class KeystoreBiometricProxy(
+    publicKey: PublicKey,
+    private val privateKey: PrivateKey
+) : SignatureProxy(publicKey) {
+    override fun sign(data: ByteArray, algorithm: String): ByteArray {
+        val jcaAlgorithm = when {
+            PublicKeyUtils.isEd25519Key(publicKey) -> "Ed25519"
+
+            publicKey is RSAPublicKey -> when (algorithm) {
+                SHA512 -> "SHA512withRSA"
+                SHA384 -> "SHA384withRSA"
+                else -> "SHA256withRSA"
+            }
+
+            publicKey is ECPublicKey -> when (algorithm) {
+                SHA512 -> "SHA512withECDSA"
+                SHA384 -> "SHA384withECDSA"
+                else -> "SHA256withECDSA"
+            }
+
+            else -> throw IOException("Unsupported key type: ${publicKey.algorithm}")
+        }
+        val sig = Signature.getInstance(jcaAlgorithm)
+        sig.initSign(privateKey)
+        sig.update(data)
+        return sig.sign()
     }
 }
