@@ -71,14 +71,15 @@ class BiometricKeyManager @Inject constructor(
 
     /**
      * Check if Ed25519 biometric keys are supported on this device.
-     * Requires Android 13+ (TIRAMISU) and the AndroidKeyStore provider to support EdDSA.
+     * Requires Android 13+ (TIRAMISU) and the AndroidKeyStore provider to support Ed25519.
      * We probe the provider directly instead of relying on the FEATURE_HARDWARE_KEYSTORE version
      * flag, which is not reliably advertised on all devices that support Ed25519 in hardware.
+     * Note: AndroidKeyStore registers the algorithm as "Ed25519", not the generic "EdDSA".
      */
     fun isEd25519BiometricSupported(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return false
         return try {
-            KeyPairGenerator.getInstance("EdDSA", KEYSTORE_PROVIDER)
+            KeyPairGenerator.getInstance("Ed25519", KEYSTORE_PROVIDER)
             true
         } catch (_: Exception) {
             false
@@ -275,7 +276,7 @@ class BiometricKeyManager @Inject constructor(
         Timber.d("Generating Ed25519 key with alias: $alias")
 
         val keyPairGenerator = KeyPairGenerator.getInstance(
-            "EdDSA",
+            "Ed25519",
             KEYSTORE_PROVIDER
         )
 
