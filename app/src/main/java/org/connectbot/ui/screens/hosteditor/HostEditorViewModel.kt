@@ -277,11 +277,12 @@ class HostEditorViewModel @Inject constructor(
                     null
                 }
 
-                // In quick connect mode, use the quickConnect string as the nickname
-                val nickname = if (!useExpandedMode && state.quickConnect.isNotBlank()) {
-                    state.quickConnect
-                } else {
-                    state.nickname
+                // In quick connect mode, use the quickConnect string as the nickname.
+                // In expanded mode, fall back to hostname when nickname is left blank.
+                val nickname = when {
+                    !useExpandedMode && state.quickConnect.isNotBlank() -> state.quickConnect
+                    state.nickname.isNotBlank() -> state.nickname
+                    else -> state.hostname
                 }
 
                 // Only SSH hosts can have a jump host
