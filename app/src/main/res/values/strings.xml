@@ -1025,6 +1025,8 @@
 	<string name="host_editor_show_advanced">Show advanced options</string>
 	<!-- Text for button to hide advanced host options -->
 	<string name="host_editor_hide_advanced">Hide advanced options</string>
+	<!-- Supporting text on nickname field: hostname will be used when nickname is empty -->
+	<string name="host_editor_nickname_default_hint">Leave empty to use hostname as nickname</string>
 
 	<!-- Terminal resize dialog -->
 	<!-- Label for width input field in terminal resize dialog -->

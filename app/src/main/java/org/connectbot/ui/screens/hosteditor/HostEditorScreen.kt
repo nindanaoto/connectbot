@@ -232,6 +232,12 @@ fun HostEditorScreenContent(
                     value = uiState.nickname,
                     onValueChange = onNicknameChange,
                     label = { Text(stringResource(R.string.hostpref_nickname_title)) },
+                    placeholder = if (uiState.hostname.isNotBlank()) {
+                        { Text(uiState.hostname) }
+                    } else {
+                        null
+                    },
+                    supportingText = { Text(stringResource(R.string.host_editor_nickname_default_hint)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
