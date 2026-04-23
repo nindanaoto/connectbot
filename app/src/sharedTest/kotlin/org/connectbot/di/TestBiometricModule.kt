@@ -39,6 +39,7 @@ object TestBiometricModule {
     @Singleton
     fun provideBiometricKeyManager(): BiometricKeyManager = object : BiometricKeyManager {
         override fun isBiometricAvailable() = BiometricAvailability.NO_HARDWARE
+        override fun getSupportedRsaKeySizes(): List<Int> = emptyList()
         override fun generateKeyAlias() = "stub-key-alias"
         override fun generateRsaKey(alias: String, keySize: Int): PublicKey = throw UnsupportedOperationException()
         override fun generateEcKey(alias: String, keySize: Int): PublicKey = throw UnsupportedOperationException()

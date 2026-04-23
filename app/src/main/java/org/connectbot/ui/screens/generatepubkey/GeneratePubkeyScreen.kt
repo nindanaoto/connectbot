@@ -179,6 +179,10 @@ fun GeneratePubkeyScreenContent(
 
             // Bit Strength
             if (uiState.allowBitStrengthChange) {
+                val sliderSteps = when {
+                    uiState.selectableBits.size > 1 -> uiState.selectableBits.size - 2
+                    else -> ((uiState.maxBits - uiState.minBits) / 8 - 1).coerceAtLeast(0)
+                }
                 Text(
                     text = "${stringResource(R.string.prompt_bits)} ${uiState.bits}",
                     style = MaterialTheme.typography.titleMedium,
@@ -188,7 +192,7 @@ fun GeneratePubkeyScreenContent(
                     value = uiState.bits.toFloat(),
                     onValueChange = { onBitsChange(it.toInt()) },
                     valueRange = uiState.minBits.toFloat()..uiState.maxBits.toFloat(),
-                    steps = ((uiState.maxBits - uiState.minBits) / 8) - 1,
+                    steps = sliderSteps,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(modifier = Modifier.height(16.dp))

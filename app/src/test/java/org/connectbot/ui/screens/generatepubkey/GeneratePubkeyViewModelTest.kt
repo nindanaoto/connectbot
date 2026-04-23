@@ -30,6 +30,7 @@ import org.connectbot.di.CoroutineDispatchers
 import org.connectbot.util.BiometricAvailability
 import org.connectbot.util.BiometricKeyManager
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -68,6 +69,8 @@ class GeneratePubkeyViewModelTest {
         biometricKeyManager = mock()
         whenever(biometricKeyManager.isBiometricAvailable())
             .thenReturn(BiometricAvailability.NO_HARDWARE)
+        whenever(biometricKeyManager.getSupportedRsaKeySizes())
+            .thenReturn(emptyList())
     }
 
     @After
@@ -138,5 +141,41 @@ class GeneratePubkeyViewModelTest {
             "Switching to biometric must clear unlockAtStartup since Keystore keys cannot auto-load",
             !viewModel.uiState.value.unlockAtStartup
         )
+    }
+
+    @Test
+    fun biometricRsa_usesDetectedKeySizeBounds() = runTest {
+        whenever(biometricKeyManager.isBiometricAvailable())
+            .thenReturn(BiometricAvailability.AVAILABLE)
+        whenever(biometricKeyManager.getSupportedRsaKeySizes())
+            .thenReturn(listOf(2048, 3072))
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateUseBiometric(true)
+        viewModel.updateBits(4096)
+
+        val state = viewModel.uiState.value
+        assertEquals(listOf(2048, 3072), state.selectableBits)
+        assertEquals(2048, state.minBits)
+        assertEquals(3072, state.maxBits)
+        assertEquals(3072, state.bits)
+    }
+
+    @Test
+    fun biometricRsa_snapsToDetectedKeySizes() = runTest {
+        whenever(biometricKeyManager.isBiometricAvailable())
+            .thenReturn(BiometricAvailability.AVAILABLE)
+        whenever(biometricKeyManager.getSupportedRsaKeySizes())
+            .thenReturn(listOf(2048, 3072, 4096))
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.updateUseBiometric(true)
+        viewModel.updateBits(2600)
+
+        assertEquals(3072, viewModel.uiState.value.bits)
     }
 }

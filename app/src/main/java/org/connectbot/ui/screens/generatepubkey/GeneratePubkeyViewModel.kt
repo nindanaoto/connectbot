@@ -60,6 +60,7 @@ data class GeneratePubkeyUiState(
     val bits: Int = KeyType.RSA.defaultBits,
     val minBits: Int = KeyType.RSA.minBits,
     val maxBits: Int = KeyType.RSA.maxBits,
+    val selectableBits: List<Int> = emptyList(),
     val allowBitStrengthChange: Boolean = true,
     val password1: String = "",
     val password2: String = "",
@@ -72,7 +73,8 @@ data class GeneratePubkeyUiState(
     // Biometric authentication options
     val useBiometric: Boolean = false,
     val biometricAvailable: Boolean = false,
-    val biometricNotEnrolled: Boolean = false
+    val biometricNotEnrolled: Boolean = false,
+    val biometricRsaKeySizes: List<Int> = emptyList()
 ) {
     val passwordMismatch: Boolean
         get() = password1 != password2 && password2.isNotEmpty()
@@ -97,19 +99,22 @@ class GeneratePubkeyViewModel @Inject constructor(
         private val ECDSA_SIZES = intArrayOf(256, 384, 521)
     }
 
-    init {
-        // Ensure Ed25519 provider is available
-        Ed25519Provider.insertIfNeeded()
-    }
+    private val biometricAvailability = biometricKeyManager.isBiometricAvailable()
 
     private val _uiState = MutableStateFlow(
         GeneratePubkeyUiState(
             ecdsaAvailable = Security.getProviders("KeyPairGenerator.EC") != null,
-            biometricAvailable = biometricKeyManager.isBiometricAvailable() == BiometricAvailability.AVAILABLE,
-            biometricNotEnrolled = biometricKeyManager.isBiometricAvailable() == BiometricAvailability.NOT_ENROLLED
+            biometricAvailable = biometricAvailability == BiometricAvailability.AVAILABLE,
+            biometricNotEnrolled = biometricAvailability == BiometricAvailability.NOT_ENROLLED
         )
     )
     val uiState: StateFlow<GeneratePubkeyUiState> = _uiState.asStateFlow()
+
+    init {
+        // Ensure Ed25519 provider is available
+        Ed25519Provider.insertIfNeeded()
+        loadBiometricKeyCapabilities()
+    }
 
     private var pendingEntropy: ByteArray? = null
 
@@ -136,6 +141,25 @@ class GeneratePubkeyViewModel @Inject constructor(
         }
     }
 
+    private fun loadBiometricKeyCapabilities() {
+        if (biometricAvailability != BiometricAvailability.AVAILABLE) {
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val supportedRsaKeySizes = withContext(dispatchers.io) {
+                    biometricKeyManager.getSupportedRsaKeySizes()
+                }
+                _uiState.update { state ->
+                    state.copy(biometricRsaKeySizes = supportedRsaKeySizes).withBitBounds()
+                }
+            } catch (e: Exception) {
+                Timber.e(e, "Failed to load biometric key capabilities")
+            }
+        }
+    }
+
     fun updateKeyType(keyType: KeyType) {
         val allowBitStrengthChange = when (keyType) {
             KeyType.RSA, KeyType.EC -> true
@@ -148,12 +172,9 @@ class GeneratePubkeyViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 keyType = keyType,
-                bits = keyType.defaultBits,
-                minBits = keyType.minBits,
-                maxBits = keyType.maxBits,
                 allowBitStrengthChange = allowBitStrengthChange,
                 useBiometric = if (BiometricKeyManager.supportsBiometric(keyType)) currentState.useBiometric else false
-            )
+            ).withBitBounds(bits = keyType.defaultBits)
         }
     }
 
@@ -171,24 +192,48 @@ class GeneratePubkeyViewModel @Inject constructor(
                 password2 = if (useBiometric) "" else it.password2,
                 // Biometric keys can't be auto-loaded at startup
                 unlockAtStartup = if (useBiometric) false else it.unlockAtStartup
-            )
+            ).withBitBounds()
         }
     }
 
     fun updateBits(bits: Int) {
         val currentState = _uiState.value
-        val clampedBits = bits.coerceIn(currentState.minBits, currentState.maxBits)
-
-        val finalBits = when (currentState.keyType) {
-            KeyType.EC -> getClosestEcdsaSize(clampedBits)
-            KeyType.ED25519 -> clampedBits
-            else -> clampedBits - (clampedBits % 8) // Keep divisible by 8
-        }
-
-        _uiState.update { it.copy(bits = finalBits) }
+        _uiState.update { it.withBitBounds(bits = bits, keyType = currentState.keyType) }
     }
 
     private fun getClosestEcdsaSize(bits: Int): Int = ECDSA_SIZES.minByOrNull { kotlin.math.abs(it - bits) } ?: ECDSA_SIZES[0]
+
+    private fun getClosestKeySize(bits: Int, keySizes: List<Int>): Int =
+        keySizes.minByOrNull { kotlin.math.abs(it - bits) } ?: bits
+
+    private fun GeneratePubkeyUiState.withBitBounds(
+        keyType: KeyType = this.keyType,
+        useBiometric: Boolean = this.useBiometric,
+        bits: Int = this.bits,
+    ): GeneratePubkeyUiState {
+        val biometricRsaSizes = if (useBiometric && keyType == KeyType.RSA) {
+            biometricRsaKeySizes.sorted()
+        } else {
+            emptyList()
+        }
+        val minBits = biometricRsaSizes.firstOrNull() ?: keyType.minBits
+        val maxBits = biometricRsaSizes.lastOrNull() ?: keyType.maxBits
+        val clampedBits = bits.coerceIn(minBits, maxBits)
+        val finalBits = when {
+            biometricRsaSizes.isNotEmpty() -> getClosestKeySize(clampedBits, biometricRsaSizes)
+            keyType == KeyType.EC -> getClosestEcdsaSize(clampedBits)
+            keyType == KeyType.ED25519 -> clampedBits
+            else -> clampedBits - (clampedBits % 8) // Keep divisible by 8
+        }
+
+        return copy(
+            keyType = keyType,
+            bits = finalBits,
+            minBits = minBits,
+            maxBits = maxBits,
+            selectableBits = biometricRsaSizes,
+        )
+    }
 
     fun updatePassword1(password: String) {
         _uiState.update { it.copy(password1 = password) }
@@ -278,10 +323,11 @@ class GeneratePubkeyViewModel @Inject constructor(
             try {
                 val (publicKey, alias) = withContext(dispatchers.io) {
                     val alias = biometricKeyManager.generateKeyAlias()
+                    val keySize = getBiometricKeySize(currentState)
                     val publicKey = biometricKeyManager.generateKey(
                         alias = alias,
                         keyType = currentState.keyType.dbName,
-                        keySize = currentState.bits
+                        keySize = keySize
                     )
                     Pair(publicKey, alias)
                 }
@@ -292,6 +338,25 @@ class GeneratePubkeyViewModel @Inject constructor(
                 _uiState.update { it.copy(isGenerating = false) }
             }
         }
+    }
+
+    private fun getBiometricKeySize(state: GeneratePubkeyUiState): Int {
+        if (state.keyType != KeyType.RSA) {
+            return state.bits
+        }
+
+        val supportedRsaKeySizes = state.biometricRsaKeySizes.ifEmpty {
+            biometricKeyManager.getSupportedRsaKeySizes()
+        }.sorted()
+
+        if (supportedRsaKeySizes.isEmpty()) {
+            throw IllegalStateException("No supported biometric RSA key sizes found")
+        }
+
+        return getClosestKeySize(
+            bits = state.bits.coerceIn(supportedRsaKeySizes.first(), supportedRsaKeySizes.last()),
+            keySizes = supportedRsaKeySizes,
+        )
     }
 
     private fun generateKeyPair(keyType: KeyType, bits: Int, entropy: ByteArray): KeyPair {

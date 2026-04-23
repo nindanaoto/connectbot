@@ -35,6 +35,7 @@ import java.util.UUID
 
 interface BiometricKeyManager {
     fun isBiometricAvailable(): BiometricAvailability
+    fun getSupportedRsaKeySizes(): List<Int>
     fun generateKeyAlias(): String
     fun generateRsaKey(alias: String, keySize: Int = 4096): PublicKey
     fun generateEcKey(alias: String, keySize: Int = 256): PublicKey
@@ -71,6 +72,8 @@ class BiometricKeyManagerImpl(
         private const val TAG = "BiometricKeyManager"
         private const val KEYSTORE_PROVIDER = "AndroidKeyStore"
         private const val KEY_ALIAS_PREFIX = "connectbot_bio_"
+        private const val CAPABILITY_KEY_ALIAS_PREFIX = KEY_ALIAS_PREFIX + "capability_"
+        private val RSA_KEY_SIZE_CANDIDATES = listOf(1024, 2048, 3072, 4096)
 
         // Authentication validity duration in seconds after successful biometric auth
         private const val AUTH_VALIDITY_DURATION_SECONDS = 30
@@ -78,6 +81,12 @@ class BiometricKeyManagerImpl(
 
     private val keyStore: KeyStore by lazy {
         KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }
+    }
+
+    private val cachedSupportedRsaKeySizes: List<Int> by lazy {
+        RSA_KEY_SIZE_CANDIDATES.filter(::canGenerateRsaKey).also {
+            Timber.d("Supported biometric RSA key sizes: %s", it)
+        }
     }
 
     override fun isBiometricAvailable(): BiometricAvailability {
@@ -92,7 +101,26 @@ class BiometricKeyManagerImpl(
         }
     }
 
+    override fun getSupportedRsaKeySizes(): List<Int> = cachedSupportedRsaKeySizes
+
     override fun generateKeyAlias(): String = KEY_ALIAS_PREFIX + UUID.randomUUID().toString()
+
+    private fun canGenerateRsaKey(keySize: Int): Boolean {
+        val alias = CAPABILITY_KEY_ALIAS_PREFIX + UUID.randomUUID().toString()
+        return try {
+            generateRsaKey(alias, keySize)
+            true
+        } catch (e: Exception) {
+            Timber.d(e, "Biometric RSA key size %d is not supported", keySize)
+            false
+        } finally {
+            try {
+                deleteKey(alias)
+            } catch (e: Exception) {
+                Timber.w(e, "Failed to delete temporary biometric RSA capability key")
+            }
+        }
+    }
 
     override fun generateRsaKey(alias: String, keySize: Int): PublicKey {
         Timber.d("Generating RSA key with alias: $alias, size: $keySize")
