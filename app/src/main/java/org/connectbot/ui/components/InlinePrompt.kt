@@ -93,7 +93,7 @@ fun InlinePrompt(
     onResponse: (PromptResponse) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
-    onDismiss: () -> Unit = {}
+    onDismiss: () -> Unit = {},
 ) {
     var wasVisible by remember { mutableStateOf(false) }
     val currentOnDismissed by rememberUpdatedState(onDismiss)
@@ -110,7 +110,7 @@ fun InlinePrompt(
         visible = promptRequest != null,
         enter = slideInVertically(initialOffsetY = { it }),
         exit = slideOutVertically(targetOffsetY = { it }),
-        modifier = modifier
+        modifier = modifier,
     ) {
         when (promptRequest) {
             is PromptRequest.BooleanPrompt -> {
@@ -118,7 +118,7 @@ fun InlinePrompt(
                     instructions = promptRequest.instructions,
                     message = promptRequest.message,
                     onYes = { onResponse(PromptResponse.BooleanResponse(true)) },
-                    onNo = { onResponse(PromptResponse.BooleanResponse(false)) }
+                    onNo = { onResponse(PromptResponse.BooleanResponse(false)) },
                 )
             }
 
@@ -128,7 +128,7 @@ fun InlinePrompt(
                     hint = promptRequest.hint,
                     isPassword = promptRequest.isPassword,
                     onSubmit = { value -> onResponse(PromptResponse.StringResponse(value)) },
-                    onCancel = onCancel
+                    onCancel = onCancel,
                 )
             }
 
@@ -137,7 +137,7 @@ fun InlinePrompt(
                 // which uses the system BiometricPrompt dialog
                 BiometricPromptHandler(
                     prompt = promptRequest,
-                    onResponse = onResponse
+                    onResponse = onResponse,
                 )
             }
 
@@ -145,14 +145,14 @@ fun InlinePrompt(
                 HostKeyFingerprintPromptContent(
                     prompt = promptRequest,
                     onAccept = { onResponse(PromptResponse.BooleanResponse(true)) },
-                    onReject = { onResponse(PromptResponse.BooleanResponse(false)) }
+                    onReject = { onResponse(PromptResponse.BooleanResponse(false)) },
                 )
             }
 
             is PromptRequest.Fido2ConnectPrompt -> {
                 Fido2ConnectPromptContent(
                     keyNickname = promptRequest.keyNickname,
-                    onCancel = onCancel
+                    onCancel = onCancel,
                 )
             }
 
@@ -161,14 +161,14 @@ fun InlinePrompt(
                     keyNickname = promptRequest.keyNickname,
                     attemptsRemaining = promptRequest.attemptsRemaining,
                     onSubmit = { pin -> onResponse(PromptResponse.Fido2PinResponse(pin)) },
-                    onCancel = onCancel
+                    onCancel = onCancel,
                 )
             }
 
             is PromptRequest.Fido2TouchPrompt -> {
                 Fido2TouchPromptContent(
                     keyNickname = promptRequest.keyNickname,
-                    onCancel = onCancel
+                    onCancel = onCancel,
                 )
             }
 
@@ -184,7 +184,7 @@ private fun BooleanPromptContent(
     instructions: String?,
     message: String,
     onYes: () -> Unit,
-    onNo: () -> Unit
+    onNo: () -> Unit,
 ) {
     val terminalColors = MaterialTheme.colorScheme.terminal
 
@@ -192,14 +192,14 @@ private fun BooleanPromptContent(
         modifier = Modifier
             .fillMaxWidth()
             .background(terminalColors.overlayBackground)
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         if (!instructions.isNullOrEmpty()) {
             Text(
                 text = instructions,
                 style = MaterialTheme.typography.bodyMedium,
                 color = terminalColors.overlayText,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp),
             )
         }
 
@@ -207,19 +207,19 @@ private fun BooleanPromptContent(
             text = message,
             style = MaterialTheme.typography.bodyLarge,
             color = terminalColors.overlayText,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onNo) {
                 Text(stringResource(R.string.button_no), color = terminalColors.overlayText)
             }
             Button(
                 onClick = onYes,
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 8.dp),
             ) {
                 Text(stringResource(R.string.button_yes))
             }
@@ -233,7 +233,7 @@ private fun StringPromptContent(
     hint: String?,
     isPassword: Boolean,
     onSubmit: (String) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     var text by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
@@ -247,14 +247,14 @@ private fun StringPromptContent(
         modifier = Modifier
             .fillMaxWidth()
             .background(terminalColors.overlayBackground)
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         if (!instructions.isNullOrEmpty()) {
             Text(
                 text = instructions,
                 style = MaterialTheme.typography.bodyMedium,
                 color = terminalColors.overlayText,
-                modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier.padding(bottom = 8.dp),
             )
         }
 
@@ -265,12 +265,12 @@ private fun StringPromptContent(
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(
                 imeAction = ImeAction.Done,
-                keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Unspecified
+                keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Unspecified,
             ),
             keyboardActions = KeyboardActions(
                 onDone = {
                     onSubmit(text)
-                }
+                },
             ),
             singleLine = true,
             colors = TextFieldDefaults.colors(
@@ -280,25 +280,25 @@ private fun StringPromptContent(
                 unfocusedContainerColor = Color.Transparent,
                 cursorColor = terminalColors.overlayText,
                 focusedIndicatorColor = terminalColors.overlayTextSecondary,
-                unfocusedIndicatorColor = terminalColors.overlayTextSecondary.copy(alpha = 0.5f)
+                unfocusedIndicatorColor = terminalColors.overlayTextSecondary.copy(alpha = 0.5f),
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester)
+                .focusRequester(focusRequester),
         )
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onCancel) {
                 Text(stringResource(R.string.delete_neg), color = terminalColors.overlayText)
             }
             Button(
                 onClick = { onSubmit(text) },
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 8.dp),
             ) {
                 Text(stringResource(R.string.button_ok))
             }
@@ -311,7 +311,7 @@ private fun StringPromptContent(
 private fun HostKeyFingerprintPromptContent(
     prompt: PromptRequest.HostKeyFingerprintPrompt,
     onAccept: () -> Unit,
-    onReject: () -> Unit
+    onReject: () -> Unit,
 ) {
     val terminalColors = MaterialTheme.colorScheme.terminal
     val clipboardManager = LocalClipboardManager.current
@@ -321,7 +321,7 @@ private fun HostKeyFingerprintPromptContent(
         stringResource(R.string.fingerprint_format_sha256) to prompt.sha256,
         stringResource(R.string.fingerprint_format_randomart) to prompt.randomArt,
         stringResource(R.string.fingerprint_format_bubblebabble) to prompt.bubblebabble,
-        stringResource(R.string.fingerprint_format_md5) to prompt.md5
+        stringResource(R.string.fingerprint_format_md5) to prompt.md5,
     )
 
     var selectedFormatIndex by remember { mutableIntStateOf(0) } // SHA-256 is first (default)
@@ -331,20 +331,20 @@ private fun HostKeyFingerprintPromptContent(
         modifier = Modifier
             .fillMaxWidth()
             .background(terminalColors.overlayBackground)
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         Text(
             text = stringResource(R.string.host_key_verification_title),
             style = MaterialTheme.typography.titleMedium,
             color = terminalColors.overlayText,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
         Text(
             text = prompt.hostname,
             style = MaterialTheme.typography.bodyLarge,
             color = terminalColors.overlayTextSecondary,
-            modifier = Modifier.padding(top = 8.dp)
+            modifier = Modifier.padding(top = 8.dp),
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -352,7 +352,7 @@ private fun HostKeyFingerprintPromptContent(
         Text(
             text = stringResource(R.string.host_key_type_and_size, prompt.keyType, prompt.keySize),
             style = MaterialTheme.typography.bodyMedium,
-            color = terminalColors.overlayText
+            color = terminalColors.overlayText,
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -361,30 +361,30 @@ private fun HostKeyFingerprintPromptContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
                 text = formats[selectedFormatIndex].second,
                 style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace,
                 ),
                 color = terminalColors.overlayText,
                 modifier = Modifier
                     .weight(1f)
                     .padding(end = 8.dp)
                     .heightIn(max = 200.dp)
-                    .verticalScroll(rememberScrollState())
+                    .verticalScroll(rememberScrollState()),
             )
 
             IconButton(
                 onClick = {
                     clipboardManager.setText(AnnotatedString(formats[selectedFormatIndex].second))
-                }
+                },
             ) {
                 Icon(
                     imageVector = Icons.Filled.ContentCopy,
                     contentDescription = stringResource(R.string.fingerprint_copy_description),
-                    tint = terminalColors.overlayTextSecondary
+                    tint = terminalColors.overlayTextSecondary,
                 )
             }
         }
@@ -394,7 +394,7 @@ private fun HostKeyFingerprintPromptContent(
         // Fingerprint format selector
         ExposedDropdownMenuBox(
             expanded = dropdownExpanded,
-            onExpandedChange = { dropdownExpanded = it }
+            onExpandedChange = { dropdownExpanded = it },
         ) {
             TextField(
                 value = formats[selectedFormatIndex].first,
@@ -413,15 +413,15 @@ private fun HostKeyFingerprintPromptContent(
                     focusedIndicatorColor = terminalColors.overlayTextSecondary,
                     unfocusedIndicatorColor = terminalColors.overlayTextSecondary.copy(alpha = 0.5f),
                     focusedLabelColor = terminalColors.overlayTextSecondary,
-                    unfocusedLabelColor = terminalColors.overlayTextSecondary
+                    unfocusedLabelColor = terminalColors.overlayTextSecondary,
                 ),
                 modifier = Modifier
-                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
             )
 
             ExposedDropdownMenu(
                 expanded = dropdownExpanded,
-                onDismissRequest = { dropdownExpanded = false }
+                onDismissRequest = { dropdownExpanded = false },
             ) {
                 formats.forEachIndexed { index, (label, _) ->
                     DropdownMenuItem(
@@ -429,7 +429,7 @@ private fun HostKeyFingerprintPromptContent(
                         onClick = {
                             selectedFormatIndex = index
                             dropdownExpanded = false
-                        }
+                        },
                     )
                 }
             }
@@ -440,21 +440,21 @@ private fun HostKeyFingerprintPromptContent(
         Text(
             text = stringResource(R.string.prompt_continue_connecting),
             style = MaterialTheme.typography.bodyLarge,
-            color = terminalColors.overlayText
+            color = terminalColors.overlayText,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onReject) {
                 Text(stringResource(R.string.button_no), color = terminalColors.overlayText)
             }
             Button(
                 onClick = onAccept,
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 8.dp),
             ) {
                 Text(stringResource(R.string.button_yes))
             }
@@ -474,17 +474,17 @@ private fun HostKeyFingerprintPromptPreview() {
             randomArt = "wobble",
             bubblebabble = "babble",
             sha256 = "sha256",
-            md5 = "md5"
+            md5 = "md5",
         ),
         onAccept = { },
-        onReject = { }
+        onReject = { },
     )
 }
 
 @Composable
 private fun Fido2ConnectPromptContent(
     keyNickname: String,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     val terminalColors = MaterialTheme.colorScheme.terminal
 
@@ -493,7 +493,7 @@ private fun Fido2ConnectPromptContent(
             .fillMaxWidth()
             .background(terminalColors.overlayBackground)
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = Icons.Filled.Usb,
@@ -501,28 +501,28 @@ private fun Fido2ConnectPromptContent(
             tint = terminalColors.overlayText,
             modifier = Modifier
                 .size(48.dp)
-                .padding(bottom = 8.dp)
+                .padding(bottom = 8.dp),
         )
 
         Text(
             text = stringResource(R.string.fido2_connect_title),
             style = MaterialTheme.typography.titleMedium,
             color = terminalColors.overlayText,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
         Text(
             text = stringResource(R.string.fido2_connect_message, keyNickname),
             style = MaterialTheme.typography.bodyMedium,
             color = terminalColors.overlayTextSecondary,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
         )
 
         CircularProgressIndicator(
             color = terminalColors.overlayText,
             modifier = Modifier
                 .size(32.dp)
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         )
 
         TextButton(onClick = onCancel) {
@@ -537,7 +537,7 @@ private fun Fido2ConnectPromptContent(
 @Composable
 fun Fido2NfcTapOverlay(
     onCancel: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val terminalColors = MaterialTheme.colorScheme.terminal
 
@@ -546,7 +546,7 @@ fun Fido2NfcTapOverlay(
             .fillMaxWidth()
             .background(terminalColors.overlayBackground)
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = Icons.Filled.Nfc,
@@ -554,28 +554,28 @@ fun Fido2NfcTapOverlay(
             tint = terminalColors.overlayText,
             modifier = Modifier
                 .size(48.dp)
-                .padding(bottom = 8.dp)
+                .padding(bottom = 8.dp),
         )
 
         Text(
             text = stringResource(R.string.fido2_nfc_tap_title),
             style = MaterialTheme.typography.titleMedium,
             color = terminalColors.overlayText,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
         Text(
             text = stringResource(R.string.fido2_nfc_tap_message),
             style = MaterialTheme.typography.bodyMedium,
             color = terminalColors.overlayTextSecondary,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
         )
 
         CircularProgressIndicator(
             color = terminalColors.overlayText,
             modifier = Modifier
                 .size(32.dp)
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
         )
 
         TextButton(onClick = onCancel) {
@@ -589,7 +589,7 @@ private fun Fido2PinPromptContent(
     keyNickname: String,
     attemptsRemaining: Int?,
     onSubmit: (String) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     var pin by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
@@ -603,11 +603,11 @@ private fun Fido2PinPromptContent(
         modifier = Modifier
             .fillMaxWidth()
             .background(terminalColors.overlayBackground)
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
         ) {
             Icon(
                 imageVector = Icons.Filled.Key,
@@ -615,12 +615,12 @@ private fun Fido2PinPromptContent(
                 tint = terminalColors.overlayText,
                 modifier = Modifier
                     .size(24.dp)
-                    .padding(end = 8.dp)
+                    .padding(end = 8.dp),
             )
             Text(
                 text = stringResource(R.string.fido2_pin_title),
                 style = MaterialTheme.typography.titleMedium,
-                color = terminalColors.overlayText
+                color = terminalColors.overlayText,
             )
         }
 
@@ -636,7 +636,7 @@ private fun Fido2PinPromptContent(
             } else {
                 terminalColors.overlayTextSecondary
             },
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
         )
 
         OutlinedTextField(
@@ -646,10 +646,10 @@ private fun Fido2PinPromptContent(
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(
                 imeAction = ImeAction.Done,
-                keyboardType = KeyboardType.Password
+                keyboardType = KeyboardType.Password,
             ),
             keyboardActions = KeyboardActions(
-                onDone = { onSubmit(pin) }
+                onDone = { onSubmit(pin) },
             ),
             singleLine = true,
             colors = TextFieldDefaults.colors(
@@ -659,18 +659,18 @@ private fun Fido2PinPromptContent(
                 unfocusedContainerColor = Color.Transparent,
                 cursorColor = terminalColors.overlayText,
                 focusedIndicatorColor = terminalColors.overlayTextSecondary,
-                unfocusedIndicatorColor = terminalColors.overlayTextSecondary.copy(alpha = 0.5f)
+                unfocusedIndicatorColor = terminalColors.overlayTextSecondary.copy(alpha = 0.5f),
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .focusRequester(focusRequester)
+                .focusRequester(focusRequester),
         )
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp),
-            horizontalArrangement = Arrangement.End
+            horizontalArrangement = Arrangement.End,
         ) {
             TextButton(onClick = onCancel) {
                 Text(stringResource(R.string.fido2_cancel), color = terminalColors.overlayText)
@@ -678,7 +678,7 @@ private fun Fido2PinPromptContent(
             Button(
                 onClick = { onSubmit(pin) },
                 enabled = pin.isNotEmpty(),
-                modifier = Modifier.padding(start = 8.dp)
+                modifier = Modifier.padding(start = 8.dp),
             ) {
                 Text(stringResource(R.string.button_ok))
             }
@@ -689,7 +689,7 @@ private fun Fido2PinPromptContent(
 @Composable
 private fun Fido2TouchPromptContent(
     keyNickname: String,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
 ) {
     val terminalColors = MaterialTheme.colorScheme.terminal
 
@@ -698,7 +698,7 @@ private fun Fido2TouchPromptContent(
             .fillMaxWidth()
             .background(terminalColors.overlayBackground)
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             imageVector = Icons.Filled.TouchApp,
@@ -706,21 +706,21 @@ private fun Fido2TouchPromptContent(
             tint = terminalColors.overlayText,
             modifier = Modifier
                 .size(48.dp)
-                .padding(bottom = 8.dp)
+                .padding(bottom = 8.dp),
         )
 
         Text(
             text = stringResource(R.string.fido2_touch_title),
             style = MaterialTheme.typography.titleMedium,
             color = terminalColors.overlayText,
-            modifier = Modifier.padding(bottom = 8.dp)
+            modifier = Modifier.padding(bottom = 8.dp),
         )
 
         Text(
             text = stringResource(R.string.fido2_touch_message, keyNickname),
             style = MaterialTheme.typography.bodyMedium,
             color = terminalColors.overlayTextSecondary,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp),
         )
 
         TextButton(onClick = onCancel) {
@@ -736,7 +736,7 @@ private const val FIDO2_PREVIEW_NICKNAME = "My YubiKey"
 private fun Fido2ConnectPromptPreview() {
     Fido2ConnectPromptContent(
         keyNickname = FIDO2_PREVIEW_NICKNAME,
-        onCancel = { }
+        onCancel = { },
     )
 }
 
@@ -747,7 +747,7 @@ private fun Fido2PinPromptPreview() {
         keyNickname = FIDO2_PREVIEW_NICKNAME,
         attemptsRemaining = 3,
         onSubmit = { },
-        onCancel = { }
+        onCancel = { },
     )
 }
 
@@ -756,6 +756,6 @@ private fun Fido2PinPromptPreview() {
 private fun Fido2TouchPromptPreview() {
     Fido2TouchPromptContent(
         keyNickname = FIDO2_PREVIEW_NICKNAME,
-        onCancel = { }
+        onCancel = { },
     )
 }

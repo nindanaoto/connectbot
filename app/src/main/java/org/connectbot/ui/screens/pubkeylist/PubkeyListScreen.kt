@@ -341,7 +341,7 @@ fun PubkeyListScreenContent(
                         onNavigateToImportFido2()
                     },
                     icon = { Icon(Icons.Default.Key, contentDescription = null) },
-                    text = { Text(stringResource(R.string.pubkey_import_fido2)) }
+                    text = { Text(stringResource(R.string.pubkey_import_fido2)) },
                 )
             }
         },
@@ -484,6 +484,7 @@ private fun PubkeyListItem(
                         )
                         .clip(CircleShape)
                         .padding(4.dp)
+
                 else -> Modifier.padding(2.dp).clip(CircleShape).padding(4.dp)
             }
 
@@ -574,7 +575,7 @@ private fun PubkeyListItem(
                         leadingIcon = {
                             Icon(Icons.Default.ContentCopy, null)
                         },
-                        enabled = !pubkey.isBiometric && !pubkey.isFido2
+                        enabled = !pubkey.isBiometric && !pubkey.isFido2,
                     )
 
                     // Copy private key in PEM format (for non-imported keys)
@@ -591,7 +592,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.ContentCopy, null)
                             },
-                            enabled = !pubkey.isBiometric && !pubkey.isFido2
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2,
                         )
                     }
 
@@ -615,7 +616,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.Lock, null)
                             },
-                            enabled = !pubkey.isBiometric && !pubkey.isFido2
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2,
                         )
                     }
 
@@ -642,7 +643,7 @@ private fun PubkeyListItem(
                         leadingIcon = {
                             Icon(Icons.Default.FileDownload, null)
                         },
-                        enabled = !pubkey.isBiometric && !pubkey.isFido2
+                        enabled = !pubkey.isBiometric && !pubkey.isFido2,
                     )
 
                     // Export private key to file in PEM format (for non-imported keys)
@@ -659,7 +660,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.FileDownload, null)
                             },
-                            enabled = !pubkey.isBiometric && !pubkey.isFido2
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2,
                         )
                     }
 
@@ -683,7 +684,7 @@ private fun PubkeyListItem(
                             leadingIcon = {
                                 Icon(Icons.Default.Lock, null)
                             },
-                            enabled = !pubkey.isBiometric && !pubkey.isFido2
+                            enabled = !pubkey.isBiometric && !pubkey.isFido2,
                         )
                     }
 

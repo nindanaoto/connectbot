@@ -51,7 +51,7 @@ data class PubkeyEditorUiState(
     val error: String? = null,
     val saveSuccess: Boolean = false,
     val wrongPassword: Boolean = false,
-    val nicknameExists: Boolean = false
+    val nicknameExists: Boolean = false,
 ) {
     val passwordMismatch: Boolean
         get() = newPassword1 != newPassword2 && newPassword2.isNotEmpty()
@@ -68,7 +68,7 @@ data class PubkeyEditorUiState(
 class PubkeyEditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: PubkeyRepository,
-    private val dispatchers: CoroutineDispatchers
+    private val dispatchers: CoroutineDispatchers,
 ) : ViewModel() {
 
     private val pubkeyId: Long = savedStateHandle.get<Long>("pubkeyId") ?: -1L
@@ -100,14 +100,14 @@ class PubkeyEditorViewModel @Inject constructor(
                             confirmUse = pubkey.confirmation,
                             isFido2 = pubkey.isFido2,
                             fido2Transport = pubkey.fido2Transport ?: Fido2Transport.USB,
-                            isLoading = false
+                            isLoading = false,
                         )
                     }
                 } else {
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            error = "Public key not found"
+                            error = "Public key not found",
                         )
                     }
                 }
@@ -116,7 +116,7 @@ class PubkeyEditorViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = "Failed to load public key: ${e.message}"
+                        error = "Failed to load public key: ${e.message}",
                     )
                 }
             }
@@ -207,7 +207,7 @@ class PubkeyEditorViewModel @Inject constructor(
                             val privateKeyObj = PubkeyUtils.decodePrivate(
                                 privateKeyData,
                                 pubkey.type,
-                                oldPassword
+                                oldPassword,
                             )
 
                             if (privateKeyObj == null) {
@@ -235,7 +235,7 @@ class PubkeyEditorViewModel @Inject constructor(
                         encrypted = newEncrypted,
                         startup = state.unlockAtStartup,
                         confirmation = state.confirmUse,
-                        fido2Transport = if (state.isFido2) state.fido2Transport else pubkey.fido2Transport
+                        fido2Transport = if (state.isFido2) state.fido2Transport else pubkey.fido2Transport,
                     )
 
                     // Save to database

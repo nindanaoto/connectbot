@@ -39,8 +39,8 @@ import androidx.room.PrimaryKey
     indices = [
         Index(value = ["nickname"], unique = true),
         Index(value = ["storage_type"]),
-        Index(value = ["allow_backup"])
-    ]
+        Index(value = ["allow_backup"]),
+    ],
 )
 data class Pubkey(
     @PrimaryKey(autoGenerate = true)
@@ -84,7 +84,7 @@ data class Pubkey(
 
     /** Preferred transport for FIDO2 security key (USB or NFC) */
     @ColumnInfo(name = "fido2_transport")
-    val fido2Transport: Fido2Transport? = null
+    val fido2Transport: Fido2Transport? = null,
 ) {
     /** Whether this key is stored in Android Keystore with biometric protection */
     val isBiometric: Boolean
