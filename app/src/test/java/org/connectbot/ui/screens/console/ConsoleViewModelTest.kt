@@ -52,7 +52,7 @@ class ConsoleViewModelTest {
     private val dispatchers = CoroutineDispatchers(
         default = testDispatcher,
         io = testDispatcher,
-        main = testDispatcher
+        main = testDispatcher,
     )
     private lateinit var terminalManager: TerminalManager
     private lateinit var savedStateHandle: SavedStateHandle
@@ -453,7 +453,7 @@ class ConsoleViewModelTest {
     private fun createMockBridge(
         id: Long,
         hostname: String,
-        progressFlow: MutableStateFlow<TerminalBridge.ProgressInfo?> = MutableStateFlow(null)
+        progressFlow: MutableStateFlow<TerminalBridge.ProgressInfo?> = MutableStateFlow(null),
     ): TerminalBridge {
         val bridge = mock<TerminalBridge>()
         val host = Host(
@@ -462,7 +462,7 @@ class ConsoleViewModelTest {
             nickname = hostname,
             protocol = "ssh",
             port = 22,
-            username = "test"
+            username = "test",
         )
         whenever(bridge.host).thenReturn(host)
         whenever(bridge.sessionId).thenReturn(id)

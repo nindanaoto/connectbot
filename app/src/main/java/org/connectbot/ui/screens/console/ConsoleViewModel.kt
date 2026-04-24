@@ -49,13 +49,13 @@ data class ConsoleUiState(
     val progressState: ProgressState? = null,
     val progressValue: Int = 0,
     // Session counts for hosts that have multiple sessions (for tab display)
-    val sessionCounts: Map<Long, Int> = emptyMap()
+    val sessionCounts: Map<Long, Int> = emptyMap(),
 )
 
 @HiltViewModel
 class ConsoleViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle,
-    private val dispatchers: CoroutineDispatchers
+    private val dispatchers: CoroutineDispatchers,
 ) : ViewModel() {
     private val hostId: Long = savedStateHandle.get<Long>("hostId") ?: -1L
     private val initialSessionId: Long = savedStateHandle.get<Long>("sessionId") ?: -1L
@@ -135,7 +135,7 @@ class ConsoleViewModel @Inject constructor(
                                 } else {
                                     it.copy(
                                         progressState = progressInfo.state,
-                                        progressValue = progressInfo.progress
+                                        progressValue = progressInfo.progress,
                                     )
                                 }
                             }
@@ -178,7 +178,7 @@ class ConsoleViewModel @Inject constructor(
                         _uiState.update {
                             it.copy(
                                 isLoading = false,
-                                error = "Temporary connection not found"
+                                error = "Temporary connection not found",
                             )
                         }
                     } else {
@@ -188,7 +188,7 @@ class ConsoleViewModel @Inject constructor(
                             _uiState.update {
                                 it.copy(
                                     isLoading = false,
-                                    error = "Failed to open connection: host not found"
+                                    error = "Failed to open connection: host not found",
                                 )
                             }
                         }
@@ -198,7 +198,7 @@ class ConsoleViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        error = e.message ?: "Failed to create connection"
+                        error = e.message ?: "Failed to create connection",
                     )
                 }
             }
@@ -262,7 +262,7 @@ class ConsoleViewModel @Inject constructor(
                 currentBridgeIndex = newIndex,
                 isLoading = if (shouldStopLoading) false else it.isLoading,
                 error = null,
-                sessionCounts = sessionCounts
+                sessionCounts = sessionCounts,
             )
         }
 
