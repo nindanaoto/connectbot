@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
@@ -105,12 +106,13 @@ fun HostListScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToPubkeys: () -> Unit,
     onNavigateToPortForwards: (Host) -> Unit,
+    onNavigateToSftp: (Host) -> Unit,
     onNavigateToProfiles: () -> Unit,
     onNavigateToHelp: () -> Unit,
     modifier: Modifier = Modifier,
     makingShortcut: Boolean = false,
     onSelectShortcut: (Host, String?, IconStyle) -> Unit = { _, _, _ -> },
-    viewModel: HostListViewModel = hiltViewModel()
+    viewModel: HostListViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val terminalManager = LocalTerminalManager.current
@@ -124,7 +126,7 @@ fun HostListScreen(
 
     // File picker for export
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = ActivityResultContracts.CreateDocument("application/json"),
     ) { uri ->
         if (uri != null && uiState.exportedJson != null) {
             scope.launch {
@@ -139,16 +141,16 @@ fun HostListScreen(
                             context.getString(
                                 R.string.export_hosts_success,
                                 exportResult.hostCount,
-                                exportResult.profileCount
+                                exportResult.profileCount,
                             ),
-                            Toast.LENGTH_SHORT
+                            Toast.LENGTH_SHORT,
                         ).show()
                     }
                 } catch (e: Exception) {
                     Toast.makeText(
                         context,
                         context.getString(R.string.export_hosts_failed, e.message),
-                        Toast.LENGTH_LONG
+                        Toast.LENGTH_LONG,
                     ).show()
                 }
                 viewModel.clearExportedJson()
@@ -160,7 +162,7 @@ fun HostListScreen(
 
     // File picker for import
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = ActivityResultContracts.OpenDocument(),
     ) { uri ->
         if (uri != null) {
             scope.launch {
@@ -175,7 +177,7 @@ fun HostListScreen(
                     Toast.makeText(
                         context,
                         context.getString(R.string.import_hosts_failed, e.message),
-                        Toast.LENGTH_LONG
+                        Toast.LENGTH_LONG,
                     ).show()
                 }
             }
@@ -207,9 +209,9 @@ fun HostListScreen(
                     result.hostsImported,
                     result.hostsSkipped,
                     result.profilesImported,
-                    result.profilesSkipped
+                    result.profilesSkipped,
                 ),
-                Toast.LENGTH_SHORT
+                Toast.LENGTH_SHORT,
             ).show()
             viewModel.clearImportResult()
         }
@@ -224,7 +226,7 @@ fun HostListScreen(
             onConfirm = { color, iconStyle ->
                 onSelectShortcut(shortcutHost!!, color, iconStyle)
                 shortcutHost = null
-            }
+            },
         )
     }
 
@@ -233,7 +235,7 @@ fun HostListScreen(
             pubkey = pendingKey,
             wrongPassword = uiState.startupKeyWrongPassword,
             onDismiss = viewModel::dismissStartupKeyPrompt,
-            onProvidePassword = viewModel::submitStartupKeyPassword
+            onProvidePassword = viewModel::submitStartupKeyPassword,
         )
     }
 
@@ -246,6 +248,7 @@ fun HostListScreen(
         onNavigateToSettings = onNavigateToSettings,
         onNavigateToPubkeys = onNavigateToPubkeys,
         onNavigateToPortForwards = onNavigateToPortForwards,
+        onNavigateToSftp = onNavigateToSftp,
         onNavigateToProfiles = onNavigateToProfiles,
         onNavigateToHelp = onNavigateToHelp,
         onToggleSortOrder = viewModel::toggleSortOrder,
@@ -256,7 +259,7 @@ fun HostListScreen(
         onDisconnectAll = viewModel::disconnectAll,
         onExportHosts = viewModel::exportHosts,
         onImportHosts = { importLauncher.launch(arrayOf("application/json")) },
-        modifier = modifier
+        modifier = modifier,
     )
 }
 
@@ -271,6 +274,7 @@ fun HostListScreenContent(
     onNavigateToSettings: () -> Unit,
     onNavigateToPubkeys: () -> Unit,
     onNavigateToPortForwards: (Host) -> Unit,
+    onNavigateToSftp: (Host) -> Unit,
     onNavigateToProfiles: () -> Unit,
     onNavigateToHelp: () -> Unit,
     onToggleSortOrder: () -> Unit,
@@ -281,7 +285,7 @@ fun HostListScreenContent(
     onDisconnectAll: () -> Unit,
     onExportHosts: () -> Unit = {},
     onImportHosts: () -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDisconnectAllDialog by remember { mutableStateOf(false) }
@@ -292,7 +296,7 @@ fun HostListScreenContent(
         uiState.error?.let { error ->
             snackbarHostState.showSnackbar(
                 message = error,
-                withDismissAction = true
+                withDismissAction = true,
             )
         }
     }
@@ -309,7 +313,7 @@ fun HostListScreenContent(
                         }
                         DropdownMenu(
                             expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
+                            onDismissRequest = { showMenu = false },
                         ) {
                             DropdownMenuItem(
                                 text = {
@@ -319,67 +323,67 @@ fun HostListScreenContent(
                                                 R.string.list_menu_sortname
                                             } else {
                                                 R.string.list_menu_sortcolor
-                                            }
-                                        )
+                                            },
+                                        ),
                                     )
                                 },
                                 onClick = {
                                     showMenu = false
                                     onToggleSortOrder()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.list_menu_settings)) },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToSettings()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.profile_list_title)) },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToProfiles()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.list_menu_pubkeys)) },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToPubkeys()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.list_menu_export_hosts)) },
                                 onClick = {
                                     showMenu = false
                                     onExportHosts()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.list_menu_import_hosts)) },
                                 onClick = {
                                     showMenu = false
                                     onImportHosts()
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.list_menu_disconnect)) },
                                 onClick = {
                                     showMenu = false
                                     showDisconnectAllDialog = true
-                                }
+                                },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.title_help)) },
                                 onClick = {
                                     showMenu = false
                                     onNavigateToHelp()
-                                }
+                                },
                             )
                         }
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
@@ -387,36 +391,36 @@ fun HostListScreenContent(
                 FloatingActionButton(
                     onClick = { onNavigateToEditHost(null) },
                     // This matches the FloatingActionButtonMenu padding
-                    modifier = Modifier.padding(end = 16.dp, bottom = 16.dp)
+                    modifier = Modifier.padding(end = 16.dp, bottom = 16.dp),
                 ) {
                     Icon(Icons.Default.Add, contentDescription = stringResource(R.string.hostpref_add_host))
                 }
             }
         },
-        modifier = modifier
+        modifier = modifier,
     ) { padding ->
         Box(
             modifier = Modifier
                 .padding(padding)
-                .fillMaxSize()
+                .fillMaxSize(),
         ) {
             when {
                 uiState.isLoading -> {
                     CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
+                        modifier = Modifier.align(Alignment.Center),
                     )
                 }
 
                 uiState.hosts.isEmpty() -> {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(
                             text = stringResource(R.string.empty_hosts_message),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(bottom = 8.dp),
                         )
                         TextButton(onClick = { onNavigateToEditHost(null) }) {
                             Text(stringResource(R.string.hostpref_add_host))
@@ -431,13 +435,13 @@ fun HostListScreenContent(
                             start = 16.dp,
                             end = 16.dp,
                             top = 16.dp,
-                            bottom = 104.dp // Extra padding to avoid FAB menu overlap (88dp + 16dp for menu padding)
+                            bottom = 104.dp, // Extra padding to avoid FAB menu overlap (88dp + 16dp for menu padding)
                         ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(
                             items = uiState.hosts,
-                            key = { it.id }
+                            key = { it.id },
                         ) { host ->
                             HostListItem(
                                 host = host,
@@ -453,9 +457,10 @@ fun HostListScreenContent(
                                 onPortForwards = { onNavigateToPortForwards(host) },
                                 onDuplicate = { onDuplicateHost(host) },
                                 onForgetHostKeys = { onForgetHostKeys(host) },
+                                onSftp = { onNavigateToSftp(host) },
                                 onDisconnect = { onDisconnectHost(host) },
                                 onDelete = { onDeleteHost(host) },
-                                makingShortcut = makingShortcut
+                                makingShortcut = makingShortcut,
                             )
                         }
                     }
@@ -470,7 +475,7 @@ fun HostListScreenContent(
             onConfirm = {
                 showDisconnectAllDialog = false
                 onDisconnectAll()
-            }
+            },
         )
     }
 }
@@ -484,10 +489,11 @@ private fun HostListItem(
     onPortForwards: () -> Unit,
     onDuplicate: () -> Unit,
     onForgetHostKeys: () -> Unit,
+    onSftp: () -> Unit,
     onDisconnect: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
-    makingShortcut: Boolean = false
+    makingShortcut: Boolean = false,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -509,7 +515,7 @@ private fun HostListItem(
         headlineContent = {
             Text(
                 text = host.nickname,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
             )
         },
         supportingContent = {
@@ -517,7 +523,7 @@ private fun HostListItem(
         },
         leadingContent = {
             Box(
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(40.dp),
             ) {
                 // Main host icon with colored background and border
                 Box(
@@ -525,14 +531,14 @@ private fun HostListItem(
                         .size(40.dp)
                         .background(
                             color = parseColor(host.color),
-                            shape = CircleShape
+                            shape = CircleShape,
                         )
                         .border(
                             width = 3.dp,
                             color = borderColor,
-                            shape = CircleShape
+                            shape = CircleShape,
                         ),
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = when (host.protocol) {
@@ -546,7 +552,7 @@ private fun HostListItem(
                             ConnectionState.UNKNOWN -> null
                         },
                         tint = Color.White,
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(24.dp),
                     )
                 }
 
@@ -558,8 +564,8 @@ private fun HostListItem(
                             .size(16.dp)
                             .background(
                                 color = MaterialTheme.colorScheme.surface,
-                                shape = CircleShape
-                            )
+                                shape = CircleShape,
+                            ),
                     ) {
                         Icon(
                             imageVector = when (connectionState) {
@@ -573,7 +579,7 @@ private fun HostListItem(
                                 ConnectionState.DISCONNECTED -> colorResource(R.color.host_red)
                                 ConnectionState.UNKNOWN -> Color.Gray // Unreachable
                             },
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(16.dp),
                         )
                     }
                 }
@@ -587,7 +593,7 @@ private fun HostListItem(
                     }
                     DropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                        onDismissRequest = { showMenu = false },
                     ) {
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.list_host_edit)) },
@@ -597,7 +603,7 @@ private fun HostListItem(
                             },
                             leadingIcon = {
                                 Icon(Icons.Default.Edit, null)
-                            }
+                            },
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.list_host_portforwards)) },
@@ -607,7 +613,7 @@ private fun HostListItem(
                             },
                             leadingIcon = {
                                 Icon(Icons.Default.Link, null)
-                            }
+                            },
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.list_host_duplicate)) },
@@ -617,7 +623,7 @@ private fun HostListItem(
                             },
                             leadingIcon = {
                                 Icon(Icons.Default.ContentCopy, null)
-                            }
+                            },
                         )
                         if (host.protocol == "ssh") {
                             DropdownMenuItem(
@@ -628,9 +634,20 @@ private fun HostListItem(
                                 },
                                 leadingIcon = {
                                     Icon(Icons.Default.Key, null)
-                                }
+                                },
                             )
                         }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.list_host_sftp)) },
+                            onClick = {
+                                showMenu = false
+                                onSftp()
+                            },
+                            enabled = host.protocol == "ssh",
+                            leadingIcon = {
+                                Icon(Icons.Default.Folder, null)
+                            },
+                        )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.list_host_disconnect)) },
                             onClick = {
@@ -640,7 +657,7 @@ private fun HostListItem(
                             enabled = connectionState == ConnectionState.CONNECTED,
                             leadingIcon = {
                                 Icon(Icons.Default.LinkOff, null)
-                            }
+                            },
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.list_host_delete)) },
@@ -650,13 +667,13 @@ private fun HostListItem(
                             },
                             leadingIcon = {
                                 Icon(Icons.Default.Delete, null)
-                            }
+                            },
                         )
                     }
                 }
             }
         },
-        modifier = modifier.clickable(onClick = onClick)
+        modifier = modifier.clickable(onClick = onClick),
     )
     HorizontalDivider()
 
@@ -667,7 +684,7 @@ private fun HostListItem(
             onConfirm = {
                 showDeleteDialog = false
                 onDelete()
-            }
+            },
         )
     }
 
@@ -678,7 +695,7 @@ private fun HostListItem(
             onConfirm = {
                 showDisconnectDialog = false
                 onDisconnect()
-            }
+            },
         )
     }
 
@@ -689,7 +706,7 @@ private fun HostListItem(
             onConfirm = {
                 showForgetHostKeysDialog = false
                 onForgetHostKeys()
-            }
+            },
         )
     }
 }
@@ -698,7 +715,7 @@ private fun HostListItem(
 private fun HostDeleteDialog(
     host: Host,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -708,7 +725,7 @@ private fun HostDeleteDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = onConfirm
+                onClick = onConfirm,
             ) {
                 Text(stringResource(R.string.button_yes))
             }
@@ -717,7 +734,7 @@ private fun HostDeleteDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.button_no))
             }
-        }
+        },
     )
 }
 
@@ -725,7 +742,7 @@ private fun HostDeleteDialog(
 private fun HostDisconnectDialog(
     host: Host,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -735,7 +752,7 @@ private fun HostDisconnectDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = onConfirm
+                onClick = onConfirm,
             ) {
                 Text(stringResource(R.string.button_yes))
             }
@@ -744,7 +761,7 @@ private fun HostDisconnectDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.button_no))
             }
-        }
+        },
     )
 }
 
@@ -752,7 +769,7 @@ private fun HostDisconnectDialog(
 private fun ForgetHostKeysDialog(
     host: Host,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -762,7 +779,7 @@ private fun ForgetHostKeysDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = onConfirm
+                onClick = onConfirm,
             ) {
                 Text(stringResource(R.string.button_yes))
             }
@@ -771,7 +788,7 @@ private fun ForgetHostKeysDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.button_no))
             }
-        }
+        },
     )
 }
 
@@ -792,13 +809,14 @@ private fun HostListScreenEmptyPreview() {
         HostListScreenContent(
             uiState = HostListUiState(
                 hosts = emptyList(),
-                isLoading = false
+                isLoading = false,
             ),
             onNavigateToConsole = {},
             onNavigateToEditHost = {},
             onNavigateToSettings = {},
             onNavigateToPubkeys = {},
             onNavigateToPortForwards = {},
+            onNavigateToSftp = {},
             onNavigateToProfiles = {},
             onNavigateToHelp = {},
             onToggleSortOrder = {},
@@ -806,7 +824,7 @@ private fun HostListScreenEmptyPreview() {
             onDuplicateHost = {},
             onForgetHostKeys = {},
             onDisconnectHost = {},
-            onDisconnectAll = {}
+            onDisconnectAll = {},
         )
     }
 }
@@ -818,13 +836,14 @@ private fun HostListScreenLoadingPreview() {
         HostListScreenContent(
             uiState = HostListUiState(
                 hosts = emptyList(),
-                isLoading = true
+                isLoading = true,
             ),
             onNavigateToConsole = {},
             onNavigateToEditHost = {},
             onNavigateToSettings = {},
             onNavigateToPubkeys = {},
             onNavigateToPortForwards = {},
+            onNavigateToSftp = {},
             onNavigateToProfiles = {},
             onNavigateToHelp = {},
             onToggleSortOrder = {},
@@ -832,7 +851,7 @@ private fun HostListScreenLoadingPreview() {
             onDuplicateHost = {},
             onForgetHostKeys = {},
             onDisconnectHost = {},
-            onDisconnectAll = {}
+            onDisconnectAll = {},
         )
     }
 }
@@ -845,13 +864,14 @@ private fun HostListScreenErrorPreview() {
             uiState = HostListUiState(
                 hosts = emptyList(),
                 isLoading = false,
-                error = "Failed to load hosts from database"
+                error = "Failed to load hosts from database",
             ),
             onNavigateToConsole = {},
             onNavigateToEditHost = {},
             onNavigateToSettings = {},
             onNavigateToPubkeys = {},
             onNavigateToPortForwards = {},
+            onNavigateToSftp = {},
             onNavigateToProfiles = {},
             onNavigateToHelp = {},
             onToggleSortOrder = {},
@@ -859,7 +879,7 @@ private fun HostListScreenErrorPreview() {
             onDuplicateHost = {},
             onForgetHostKeys = {},
             onDisconnectHost = {},
-            onDisconnectAll = {}
+            onDisconnectAll = {},
         )
     }
 }
@@ -878,7 +898,7 @@ private fun HostListScreenPopulatedPreview() {
                         username = "root",
                         hostname = "prod.example.com",
                         port = 22,
-                        color = "#4CAF50"
+                        color = "#4CAF50",
                     ),
                     Host(
                         id = 2,
@@ -887,7 +907,7 @@ private fun HostListScreenPopulatedPreview() {
                         username = "developer",
                         hostname = "dev.example.com",
                         port = 2222,
-                        color = "#2196F3"
+                        color = "#2196F3",
                     ),
                     Host(
                         id = 3,
@@ -896,21 +916,22 @@ private fun HostListScreenPopulatedPreview() {
                         username = "admin",
                         hostname = "192.168.1.100",
                         port = 22,
-                        color = "#FF9800"
-                    )
+                        color = "#FF9800",
+                    ),
                 ),
                 connectionStates = mapOf(
                     1L to ConnectionState.CONNECTED,
                     2L to ConnectionState.DISCONNECTED,
-                    3L to ConnectionState.UNKNOWN
+                    3L to ConnectionState.UNKNOWN,
                 ),
-                isLoading = false
+                isLoading = false,
             ),
             onNavigateToConsole = {},
             onNavigateToEditHost = {},
             onNavigateToSettings = {},
             onNavigateToPubkeys = {},
             onNavigateToPortForwards = {},
+            onNavigateToSftp = {},
             onNavigateToProfiles = {},
             onNavigateToHelp = {},
             onToggleSortOrder = {},
@@ -918,7 +939,7 @@ private fun HostListScreenPopulatedPreview() {
             onDuplicateHost = {},
             onForgetHostKeys = {},
             onDisconnectHost = {},
-            onDisconnectAll = {}
+            onDisconnectAll = {},
         )
     }
 }
@@ -928,7 +949,7 @@ private fun StartupKeyPasswordDialog(
     pubkey: Pubkey,
     wrongPassword: Boolean,
     onDismiss: () -> Unit,
-    onProvidePassword: (String) -> Unit
+    onProvidePassword: (String) -> Unit,
 ) {
     var password by remember(pubkey.id) { mutableStateOf("") }
 
@@ -940,7 +961,7 @@ private fun StartupKeyPasswordDialog(
             Column {
                 Text(
                     text = stringResource(R.string.pubkey_unlock_message, pubkey.nickname),
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier.padding(bottom = 16.dp),
                 )
                 OutlinedTextField(
                     value = password,
@@ -955,7 +976,7 @@ private fun StartupKeyPasswordDialog(
                         null
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
                 )
             }
         },
@@ -968,6 +989,6 @@ private fun StartupKeyPasswordDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(android.R.string.cancel))
             }
-        }
+        },
     )
 }
