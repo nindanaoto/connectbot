@@ -49,6 +49,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.MoreVert
@@ -120,6 +121,7 @@ import org.connectbot.fido2.Fido2ConnectionState
 import org.connectbot.service.DisconnectReason
 import org.connectbot.service.PromptRequest
 import org.connectbot.service.PromptResponse
+import org.connectbot.terminal.ComposeController
 import org.connectbot.terminal.ProgressState
 import org.connectbot.terminal.SelectionController
 import org.connectbot.terminal.Terminal
@@ -179,6 +181,7 @@ fun ConsoleScreen(
     // Read preferences
     val prefs = remember { PreferenceManager.getDefaultSharedPreferences(context) }
     val keyboardAlwaysVisible = remember { prefs.getBoolean(PreferenceConstants.KEY_ALWAYS_VISIBLE, false) }
+    val showImeToggleKey = remember { prefs.getBoolean(PreferenceConstants.IME_TOGGLE_KEY, true) }
     var fullscreen by remember { mutableStateOf(prefs.getBoolean(PreferenceConstants.FULLSCREEN, false)) }
     var titleBarHide by remember { mutableStateOf(prefs.getBoolean(PreferenceConstants.TITLEBARHIDE, false)) }
     val volumeKeysChangeFontSize = remember { prefs.getBoolean(PreferenceConstants.VOLUME_FONT, true) }
@@ -222,6 +225,7 @@ fun ConsoleScreen(
     }
     var scannedUrls by remember { mutableStateOf<List<String>>(emptyList()) }
     var selectionController by remember { mutableStateOf<SelectionController?>(null) }
+    var composeController by remember { mutableStateOf<ComposeController?>(null) }
     var imeVisible by remember { mutableStateOf(false) }
     var keyboardScrollInProgress by remember { mutableStateOf(false) }
 
@@ -380,9 +384,10 @@ fun ConsoleScreen(
         }
     }
 
-    // Reset selection controller when bridge changes
+    // Reset selection and compose controllers when bridge changes
     LaunchedEffect(currentBridge) {
         selectionController = null
+        composeController = null
     }
 
     // Initialize forceSize from profile when bridge changes
@@ -584,6 +589,7 @@ fun ConsoleScreen(
                             forcedSize = forceSize,
                             modifierManager = bridge.keyHandler,
                             onSelectionControllerAvailable = { selectionController = it },
+                            onComposeControllerAvailable = { composeController = it },
                             onTerminalTap = { handleTerminalInteraction(isTerminalTap = true) },
                             onImeVisibilityChanged = { visible ->
                                 imeVisible = visible
@@ -630,6 +636,11 @@ fun ConsoleScreen(
                                 },
                                 imeVisible = imeVisible,
                                 playAnimation = !hasPlayedKeyboardAnimation,
+                                showImeToggleKey = showImeToggleKey,
+                                isComposeModeActive = composeController?.isComposeModeActive == true,
+                                onToggleComposeMode = {
+                                    composeController?.toggleComposeMode()
+                                },
                             )
                         }
 
@@ -939,6 +950,27 @@ fun ConsoleScreen(
                                     showResizeDialog = true
                                 },
                                 enabled = sessionOpen,
+                            )
+
+                            // Compose mode (IME) toggle — persistent entry so users can always
+                            // enable multi-byte IME composition (Japanese, Chinese, Korean, etc.)
+                            // even when the optional IME key on the special-keys row is hidden.
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.console_menu_compose_mode)) },
+                                onClick = {
+                                    showMenu = false
+                                    composeController?.toggleComposeMode()
+                                },
+                                enabled = composeController != null,
+                                leadingIcon = {
+                                    Icon(Icons.Default.Language, contentDescription = null)
+                                },
+                                trailingIcon = {
+                                    Checkbox(
+                                        checked = composeController?.isComposeModeActive == true,
+                                        onCheckedChange = null,
+                                    )
+                                },
                             )
 
                             // Port Forwards (if available)
