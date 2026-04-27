@@ -65,7 +65,7 @@ data class HostEditorUiState(
     val moshServer: String = "",
     val locale: String = "en_US.UTF-8",
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )
 
 @HiltViewModel
@@ -75,7 +75,7 @@ class HostEditorViewModel @Inject constructor(
     private val pubkeyRepository: PubkeyRepository,
     private val profileRepository: ProfileRepository,
     private val prefs: android.content.SharedPreferences,
-    private val securePasswordStorage: SecurePasswordStorage
+    private val securePasswordStorage: SecurePasswordStorage,
 ) : ViewModel() {
 
     private val hostId: Long = savedStateHandle.get<Long>("hostId") ?: -1L
@@ -158,7 +158,7 @@ class HostEditorViewModel @Inject constructor(
                             moshPort = host.moshPort.toString(),
                             moshServer = host.moshServer ?: "",
                             locale = host.locale,
-                            isLoading = false
+                            isLoading = false,
                         )
                     }
                 } else {
@@ -210,7 +210,7 @@ class HostEditorViewModel @Inject constructor(
                 it.copy(
                     username = username.ifBlank { "" },
                     hostname = hostname,
-                    port = port.ifBlank { "22" }
+                    port = port.ifBlank { "22" },
                 )
             }
         }
@@ -329,7 +329,7 @@ class HostEditorViewModel @Inject constructor(
                     // Mosh-specific fields
                     moshPort = state.moshPort.toIntOrNull() ?: 0,
                     moshServer = state.moshServer.ifBlank { null },
-                    locale = state.locale.ifBlank { "en_US.UTF-8" }
+                    locale = state.locale.ifBlank { "en_US.UTF-8" },
                 )
 
                 val savedHost = repository.saveHost(host)

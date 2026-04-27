@@ -30,8 +30,8 @@ import androidx.room.PrimaryKey
     tableName = "hosts",
     indices = [
         Index(value = ["nickname"], unique = true),
-        Index(value = ["protocol", "username", "hostname", "port"])
-    ]
+        Index(value = ["protocol", "username", "hostname", "port"]),
+    ],
 )
 data class Host(
     @PrimaryKey(autoGenerate = true)
@@ -125,7 +125,7 @@ data class Host(
      * Mosh requires locale to be set properly for UTF-8 support.
      */
     @ColumnInfo(name = "locale", defaultValue = "en_US.UTF-8")
-    val locale: String = "en_US.UTF-8"
+    val locale: String = "en_US.UTF-8",
 ) {
     /**
      * Check if this host is temporary (not saved to database).
@@ -179,7 +179,7 @@ data class Host(
             protocol = "ssh",
             username = username,
             hostname = hostname,
-            port = port
+            port = port,
         )
 
         /**
@@ -192,7 +192,7 @@ data class Host(
             protocol = "telnet",
             username = "",
             hostname = hostname,
-            port = port
+            port = port,
         )
 
         /**
@@ -205,7 +205,7 @@ data class Host(
             protocol = "local",
             username = "",
             hostname = "",
-            port = 0
+            port = 0,
         )
 
         /**
@@ -219,7 +219,7 @@ data class Host(
             username: String,
             moshPort: Int = 0,
             moshServer: String? = null,
-            locale: String = "en_US.UTF-8"
+            locale: String = "en_US.UTF-8",
         ): Host = Host(
             id = 0L,
             nickname = nickname,
@@ -229,7 +229,7 @@ data class Host(
             port = port,
             moshPort = moshPort,
             moshServer = moshServer,
-            locale = locale
+            locale = locale,
         )
     }
 }

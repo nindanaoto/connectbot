@@ -24,6 +24,7 @@ import android.os.Process
 import androidx.core.net.toUri
 import org.connectbot.R
 import org.connectbot.data.entity.Host
+import org.connectbot.service.DisconnectReason
 import org.connectbot.service.TerminalBridge
 import org.connectbot.service.TerminalManager
 import org.connectbot.util.InstallMosh
@@ -96,7 +97,7 @@ class Mosh : SSH {
             if (moshCredentials == null) {
                 bridge?.outputLine(manager?.res?.getString(R.string.terminal_mosh_server_failed))
                 close()
-                bridge?.dispatchDisconnect(false)
+                bridge?.dispatchDisconnect(DisconnectReason.IO_ERROR)
                 return
             }
 
@@ -107,7 +108,7 @@ class Mosh : SSH {
             if (!startMoshClient(moshCredentials, currentHost)) {
                 bridge?.outputLine(manager?.res?.getString(R.string.terminal_mosh_client_failed))
                 close()
-                bridge?.dispatchDisconnect(false)
+                bridge?.dispatchDisconnect(DisconnectReason.IO_ERROR)
                 return
             }
 
@@ -118,7 +119,7 @@ class Mosh : SSH {
             Timber.e(e, "Failed to establish mosh connection")
             bridge?.outputLine(manager?.res?.getString(R.string.terminal_mosh_error, e.message ?: "Unknown error"))
             close()
-            bridge?.dispatchDisconnect(false)
+            bridge?.dispatchDisconnect(DisconnectReason.IO_ERROR)
         }
     }
 
@@ -181,7 +182,7 @@ class Mosh : SSH {
             return MoshCredentials(
                 ip = currentHost.hostname,
                 port = port,
-                key = key
+                key = key,
             )
         } catch (e: Exception) {
             Timber.e(e, "Error launching mosh-server")
@@ -241,7 +242,7 @@ class Mosh : SSH {
                 credentials.key,
                 terminfoPath,
                 locale,
-                processIdArray
+                processIdArray,
             )
 
             if (moshClientFd == null) {
@@ -275,7 +276,7 @@ class Mosh : SSH {
             Timber.d("Mosh-client exited with code: $exitCode")
             if (moshConnected) {
                 moshConnected = false
-                bridge?.dispatchDisconnect(false)
+                bridge?.dispatchDisconnect(DisconnectReason.REMOTE_EOF)
             }
         }.apply {
             name = "MoshExitWatcher"
@@ -377,7 +378,7 @@ class Mosh : SSH {
             nickname = nickname,
             hostname = hostname ?: "",
             port = port,
-            username = username ?: ""
+            username = username ?: "",
         )
     }
 
@@ -431,7 +432,7 @@ class Mosh : SSH {
     private data class MoshCredentials(
         val ip: String,
         val port: String,
-        val key: String
+        val key: String,
     )
 
     companion object {
@@ -447,12 +448,12 @@ class Mosh : SSH {
         // Format: MOSH CONNECT <port> <key>
         private val MOSH_CONNECT_PATTERN = Pattern.compile(
             "MOSH CONNECT (\\d+) (\\S+)",
-            Pattern.MULTILINE
+            Pattern.MULTILINE,
         )
 
         private val hostmask = Pattern.compile(
             "^(.+)@((?:[0-9a-z._-]+)|(?:\\[[a-f:0-9]+(?:%[-_.a-z0-9]+)?\\]))(?::(\\d+))?\$",
-            Pattern.CASE_INSENSITIVE
+            Pattern.CASE_INSENSITIVE,
         )
 
         @JvmStatic
@@ -503,7 +504,7 @@ class Mosh : SSH {
             "%s@%s:%s",
             context.getString(R.string.format_username),
             context.getString(R.string.format_hostname),
-            context.getString(R.string.format_port)
+            context.getString(R.string.format_port),
         )
     }
 }

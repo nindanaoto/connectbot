@@ -84,7 +84,7 @@ class MainActivity : AppCompatActivity() {
     private var showDisconnectAllDialog by mutableStateOf(false)
 
     private val requestNotificationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
+        ActivityResultContracts.RequestPermission(),
     ) { _ ->
         // Check the actual permission status instead of relying on the launcher result.
         // If user went to settings and granted permission, the result will be false but
@@ -123,8 +123,8 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
                 lightScrim = android.graphics.Color.TRANSPARENT,
-                darkScrim = android.graphics.Color.TRANSPARENT
-            )
+                darkScrim = android.graphics.Color.TRANSPARENT,
+            ),
         )
         super.onCreate(savedInstanceState)
 
@@ -232,7 +232,7 @@ class MainActivity : AppCompatActivity() {
                             Timber.d("User confirmed disconnectAll")
                             showDisconnectAllDialog = false
                             appViewModel.setPendingDisconnectAll(true)
-                        }
+                        },
                     )
                 }
             }
@@ -271,7 +271,7 @@ class MainActivity : AppCompatActivity() {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             }
-                        }
+                        },
                     )
                 }
             }
@@ -312,7 +312,7 @@ class MainActivity : AppCompatActivity() {
                 onSelectShortcut = { host, color, iconStyle ->
                     createShortcutAndFinish(host, color, iconStyle)
                 },
-                onNavigateToConsole = onNavigateToConsole
+                onNavigateToConsole = onNavigateToConsole,
             )
         }
     }
@@ -405,7 +405,7 @@ class MainActivity : AppCompatActivity() {
 @Composable
 private fun NotificationPermissionRationaleDialog(
     onDismiss: () -> Unit,
-    onAllow: () -> Unit
+    onAllow: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -420,6 +420,6 @@ private fun NotificationPermissionRationaleDialog(
             TextButton(onClick = onDismiss) {
                 Text(stringResource(R.string.connect_anyway))
             }
-        }
+        },
     )
 }
