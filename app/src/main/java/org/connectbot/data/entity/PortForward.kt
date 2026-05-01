@@ -53,6 +53,9 @@ data class PortForward(
     @ColumnInfo(name = "source_port")
     val sourcePort: Int,
 
+    @ColumnInfo(name = "source_addr")
+    val sourceAddr: String? = null,
+
     @ColumnInfo(name = "dest_addr")
     val destAddr: String?,
 
@@ -106,6 +109,7 @@ data class PortForward(
         if (nickname != other.nickname) return false
         if (type != other.type) return false
         if (sourcePort != other.sourcePort) return false
+        if (sourceAddr != other.sourceAddr) return false
         if (destAddr != other.destAddr) return false
         if (destPort != other.destPort) return false
         if (enabled != other.enabled) return false
@@ -120,6 +124,7 @@ data class PortForward(
         result = 31 * result + nickname.hashCode()
         result = 31 * result + type.hashCode()
         result = 31 * result + sourcePort
+        result = 31 * result + (sourceAddr?.hashCode() ?: 0)
         result = 31 * result + (destAddr?.hashCode() ?: 0)
         result = 31 * result + destPort
         result = 31 * result + enabled.hashCode()

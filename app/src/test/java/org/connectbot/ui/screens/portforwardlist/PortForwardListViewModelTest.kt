@@ -201,6 +201,7 @@ class PortForwardListViewModelTest {
         assertEquals("new-forward", saved.nickname)
         assertEquals("local", saved.type)
         assertEquals(9090, saved.sourcePort)
+        assertNull(saved.sourceAddr)
         assertEquals("example.com", saved.destAddr)
         assertEquals(443, saved.destPort)
         assertEquals(testHostId, saved.hostId)
@@ -275,6 +276,7 @@ class PortForwardListViewModelTest {
         assertEquals("updated-forward", updated.nickname)
         assertEquals("remote", updated.type)
         assertEquals(8888, updated.sourcePort)
+        assertNull(updated.sourceAddr)
         assertEquals("newhost.com", updated.destAddr)
         assertEquals(22, updated.destPort)
         assertEquals(testHostId, updated.hostId)
@@ -427,6 +429,52 @@ class PortForwardListViewModelTest {
 
         assertEquals("example.com", captor.firstValue.destAddr)
         assertEquals(443, captor.firstValue.destPort)
+    }
+
+    @Test
+    fun parseSource_WithBindAddressAndPort() = runTest {
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.addPortForward(
+            nickname = "reverse-proxy",
+            type = HostConstants.PORTFORWARD_REMOTE,
+            sourcePort = "0.0.0.0:8080",
+            destination = "localhost:80"
+        )
+        advanceUntilIdle()
+
+        val captor = argumentCaptor<PortForward>()
+        verify(repository).savePortForward(captor.capture())
+
+        val saved = captor.firstValue
+        assertEquals("0.0.0.0", saved.sourceAddr)
+        assertEquals(8080, saved.sourcePort)
+        assertEquals("localhost", saved.destAddr)
+        assertEquals(80, saved.destPort)
+    }
+
+    @Test
+    fun parseEndpoint_WithBracketedIpv6Address() = runTest {
+        viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.addPortForward(
+            nickname = "ipv6-forward",
+            type = HostConstants.PORTFORWARD_LOCAL,
+            sourcePort = "[::1]:8080",
+            destination = "[2001:db8::1]:443"
+        )
+        advanceUntilIdle()
+
+        val captor = argumentCaptor<PortForward>()
+        verify(repository).savePortForward(captor.capture())
+
+        val saved = captor.firstValue
+        assertEquals("::1", saved.sourceAddr)
+        assertEquals(8080, saved.sourcePort)
+        assertEquals("2001:db8::1", saved.destAddr)
+        assertEquals(443, saved.destPort)
     }
 
     @Test

@@ -1059,7 +1059,7 @@ class SSH :
             HostConstants.PORTFORWARD_LOCAL -> {
                 val lpf: LocalPortForwarder? = try {
                     connection?.createLocalPortForwarder(
-                        InetSocketAddress(InetAddress.getLocalHost(), portForward.sourcePort),
+                        InetSocketAddress(resolveBindAddress(portForward.sourceAddr), portForward.sourcePort),
                         portForward.destAddr,
                         portForward.destPort,
                     )
@@ -1080,7 +1080,12 @@ class SSH :
 
             HostConstants.PORTFORWARD_REMOTE -> {
                 try {
-                    connection?.requestRemotePortForwarding("", portForward.sourcePort, portForward.destAddr, portForward.destPort)
+                    connection?.requestRemotePortForwarding(
+                        portForward.sourceAddr.orEmpty(),
+                        portForward.sourcePort,
+                        portForward.destAddr,
+                        portForward.destPort,
+                    )
                 } catch (e: Exception) {
                     Timber.e(e, "Could not create remote port forward")
                     return false
@@ -1093,7 +1098,7 @@ class SSH :
             HostConstants.PORTFORWARD_DYNAMIC5 -> {
                 val dpf: DynamicPortForwarder? = try {
                     connection?.createDynamicPortForwarder(
-                        InetSocketAddress(InetAddress.getLocalHost(), portForward.sourcePort),
+                        InetSocketAddress(resolveBindAddress(portForward.sourceAddr), portForward.sourcePort),
                     )
                 } catch (e: Exception) {
                     Timber.e(e, "Could not create dynamic port forward")
@@ -1111,6 +1116,12 @@ class SSH :
                 false
             }
         }
+    }
+
+    private fun resolveBindAddress(sourceAddr: String?): InetAddress = if (sourceAddr.isNullOrBlank()) {
+        InetAddress.getLocalHost()
+    } else {
+        InetAddress.getByName(sourceAddr)
     }
 
     override fun disablePortForward(portForward: PortForward): Boolean {

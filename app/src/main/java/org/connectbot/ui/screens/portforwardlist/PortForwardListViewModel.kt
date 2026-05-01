@@ -121,7 +121,7 @@ class PortForwardListViewModel @Inject constructor(
     fun addPortForward(nickname: String, type: String, sourcePort: String, destination: String) {
         viewModelScope.launch {
             try {
-                val srcPort = validatePort(sourcePort, "source")
+                val source = parseSource(sourcePort)
                 val parsed = if (type == HostConstants.PORTFORWARD_DYNAMIC5) {
                     ParsedDestination(null, 0)
                 } else {
@@ -133,7 +133,8 @@ class PortForwardListViewModel @Inject constructor(
                         hostId = hostId,
                         nickname = nickname,
                         type = type,
-                        sourcePort = srcPort,
+                        sourcePort = source.port,
+                        sourceAddr = source.address,
                         destAddr = parsed.address,
                         destPort = parsed.port
                     )
@@ -165,7 +166,7 @@ class PortForwardListViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val srcPort = validatePort(sourcePort, "source")
+                val source = parseSource(sourcePort)
                 val parsed = if (type == HostConstants.PORTFORWARD_DYNAMIC5) {
                     ParsedDestination(null, 0)
                 } else {
@@ -176,7 +177,8 @@ class PortForwardListViewModel @Inject constructor(
                     val updatedPf = portForward.copy(
                         nickname = nickname,
                         type = type,
-                        sourcePort = srcPort,
+                        sourcePort = source.port,
+                        sourceAddr = source.address,
                         destAddr = parsed.address,
                         destPort = parsed.port
                     )
@@ -299,17 +301,55 @@ class PortForwardListViewModel @Inject constructor(
 
     private data class ParsedDestination(val address: String?, val port: Int)
 
-    private fun parseDestination(destination: String): ParsedDestination {
-        val destSplit = destination.split(":")
-        val destAddr = destSplit.firstOrNull()
+    private data class ParsedSource(val address: String?, val port: Int)
 
-        val destPort = if (destSplit.size > 1) {
-            validatePort(destSplit.last(), "destination")
-        } else {
+    private fun parseSource(source: String): ParsedSource {
+        val value = source.trim()
+        if (value.isEmpty()) {
+            throw IllegalArgumentException("Source port is required")
+        }
+
+        val endpoint = parseEndpoint(value, allowPortOnly = true, portType = "source")
+        return ParsedSource(endpoint.address?.ifBlank { null }, endpoint.port)
+    }
+
+    private fun parseDestination(destination: String): ParsedDestination {
+        val endpoint = parseEndpoint(destination.trim(), allowPortOnly = false, portType = "destination")
+        return ParsedDestination(endpoint.address, endpoint.port)
+    }
+
+    private data class ParsedEndpoint(val address: String?, val port: Int)
+
+    private fun parseEndpoint(value: String, allowPortOnly: Boolean, portType: String): ParsedEndpoint {
+        if (value.startsWith("[")) {
+            val closingBracket = value.indexOf(']')
+            if (closingBracket <= 1 || closingBracket + 1 >= value.length || value[closingBracket + 1] != ':') {
+                throw IllegalArgumentException("Invalid $portType address format")
+            }
+
+            val address = value.substring(1, closingBracket)
+            val port = validatePort(value.substring(closingBracket + 2), portType)
+            return ParsedEndpoint(address, port)
+        }
+
+        val lastColon = value.lastIndexOf(':')
+        if (lastColon < 0) {
+            if (allowPortOnly) {
+                return ParsedEndpoint(null, validatePort(value, portType))
+            }
             throw IllegalArgumentException("Destination must include a port (format: host:port)")
         }
 
-        return ParsedDestination(destAddr, destPort)
+        if (value.indexOf(':') != lastColon) {
+            throw IllegalArgumentException("IPv6 addresses must be enclosed in brackets")
+        }
+
+        val address = value.substring(0, lastColon)
+        if (address.isEmpty()) {
+            throw IllegalArgumentException("Host must not be empty")
+        }
+        val port = validatePort(value.substring(lastColon + 1), portType)
+        return ParsedEndpoint(address, port)
     }
 
     private suspend fun withActiveBridge(action: suspend (TerminalBridge) -> Unit) {

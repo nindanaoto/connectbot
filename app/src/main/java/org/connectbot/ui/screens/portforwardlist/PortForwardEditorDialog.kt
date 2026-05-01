@@ -87,14 +87,12 @@ fun PortForwardEditorDialog(
     val needsDestination = typeIndex != 2
 
     // Validation
-    val sourcePortValue = sourcePort.ifEmpty { "8080" }.toIntOrNull()
+    val sourcePortValue = parsePortFromEndpoint(sourcePort.ifEmpty { "8080" }, allowPortOnly = true)
     val isSourcePortValid = sourcePortValue != null && sourcePortValue in 1..65535
 
     val isDestinationValid = if (needsDestination) {
         val dest = destination.ifEmpty { "localhost:80" }
-        // Basic validation: should contain a colon and have non-empty parts
-        val parts = dest.split(":")
-        parts.size == 2 && parts[0].isNotEmpty() && parts[1].toIntOrNull() != null
+        parsePortFromEndpoint(dest, allowPortOnly = false) != null
     } else {
         true // Destination not needed for dynamic SOCKS
     }
@@ -206,4 +204,25 @@ fun PortForwardEditorDialog(
             }
         }
     )
+}
+
+private fun parsePortFromEndpoint(value: String, allowPortOnly: Boolean): Int? {
+    if (value.startsWith("[")) {
+        val closingBracket = value.indexOf(']')
+        if (closingBracket <= 1 || closingBracket + 1 >= value.length || value[closingBracket + 1] != ':') {
+            return null
+        }
+        return value.substring(closingBracket + 2).toIntOrNull()
+    }
+
+    val lastColon = value.lastIndexOf(':')
+    if (lastColon < 0) {
+        return if (allowPortOnly) value.toIntOrNull() else null
+    }
+
+    if (value.indexOf(':') != lastColon || lastColon == 0) {
+        return null
+    }
+
+    return value.substring(lastColon + 1).toIntOrNull()
 }

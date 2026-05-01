@@ -66,6 +66,7 @@ import org.connectbot.R
 import org.connectbot.data.entity.PortForward
 import org.connectbot.ui.PreviewScreen
 import org.connectbot.ui.theme.ConnectBotTheme
+import org.connectbot.util.HostConstants
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -223,7 +224,11 @@ fun PortForwardListScreenContent(
             },
             initialNickname = portForward.nickname,
             initialType = portForward.type,
-            initialSourcePort = portForward.sourcePort.toString(),
+            initialSourcePort =
+                portForward.sourceAddr
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { "$it:${portForward.sourcePort}" }
+                    ?: portForward.sourcePort.toString(),
             initialDestination = initialDest,
             isEditing = true,
         )
@@ -298,7 +303,7 @@ private fun PortForwardListScreenPopulatedPreview() {
                     PortForward(
                         id = 1,
                         nickname = "MySQL Tunnel",
-                        type = "Local",
+                        type = HostConstants.PORTFORWARD_LOCAL,
                         sourcePort = 3306,
                         destAddr = "db.internal",
                         destPort = 3306,
@@ -307,8 +312,9 @@ private fun PortForwardListScreenPopulatedPreview() {
                     PortForward(
                         id = 2,
                         nickname = "Web Server",
-                        type = "Remote",
+                        type = HostConstants.PORTFORWARD_REMOTE,
                         sourcePort = 8080,
+                        sourceAddr = "0.0.0.0",
                         destAddr = "localhost",
                         destPort = 80,
                         hostId = 1,
@@ -316,9 +322,9 @@ private fun PortForwardListScreenPopulatedPreview() {
                     PortForward(
                         id = 3,
                         nickname = "SOCKS Proxy",
-                        type = "Dynamic",
+                        type = HostConstants.PORTFORWARD_DYNAMIC5,
                         sourcePort = 1080,
-                        destAddr = "",
+                        destAddr = null,
                         destPort = 0,
                         hostId = 1,
                     ).apply { setEnabled(true) },
@@ -364,7 +370,7 @@ private fun PortForwardListItem(
                         portForward.type,
                     ),
                 )
-                Text("${portForward.sourcePort} → ${portForward.destAddr}:${portForward.destPort}")
+                Text(portForward.getForwardDisplay())
             }
         },
         leadingContent = {
@@ -436,4 +442,17 @@ private fun PortForwardListItem(
         modifier = modifier.clickable { onEdit() },
     )
     HorizontalDivider()
+}
+
+private fun PortForward.getForwardDisplay(): String {
+    val source =
+        sourceAddr
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "$it:$sourcePort" }
+            ?: sourcePort.toString()
+    return if (type == HostConstants.PORTFORWARD_DYNAMIC5) {
+        source
+    } else {
+        "$source -> $destAddr:$destPort"
+    }
 }

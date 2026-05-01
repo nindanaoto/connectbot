@@ -195,11 +195,13 @@ class PortForwardDaoTest {
         val portForward = createTestPortForward(
             hostId = hostId,
             nickname = "with-dest",
+            sourceAddr = "0.0.0.0",
             destAddr = "192.168.1.100"
         )
         val id = portForwardDao.insert(portForward)
 
         val retrieved = portForwardDao.getById(id)
+        assertThat(retrieved?.sourceAddr).isEqualTo("0.0.0.0")
         assertThat(retrieved?.destAddr).isEqualTo("192.168.1.100")
     }
 
@@ -252,6 +254,7 @@ class PortForwardDaoTest {
         nickname: String,
         type: String = "local",
         sourcePort: Int = 8080,
+        sourceAddr: String? = null,
         destAddr: String = "localhost",
         destPort: Int = 80
     ): PortForward = PortForward(
@@ -259,6 +262,7 @@ class PortForwardDaoTest {
         nickname = nickname,
         type = type,
         sourcePort = sourcePort,
+        sourceAddr = sourceAddr,
         destAddr = destAddr,
         destPort = destPort
     )
