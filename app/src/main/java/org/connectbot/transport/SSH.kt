@@ -1190,6 +1190,13 @@ open class SSH :
         bridge?.dispatchDisconnect(reason)
     }
 
+    @VisibleForTesting
+    internal fun getDisconnectReasonForClosedSession(session: Session): DisconnectReason = if (session.exitStatus != null) {
+        DisconnectReason.SESSION_EXIT
+    } else {
+        DisconnectReason.REMOTE_EOF
+    }
+
     @Throws(IOException::class)
     override fun flush() {
         stdin?.flush()
@@ -1215,10 +1222,14 @@ open class SSH :
         }
 
         if ((newConditions and ChannelCondition.EOF) != 0) {
-            // Dispatch REMOTE_EOF before close(): connection.close() fires
+            if (bytesRead > 0) {
+                return bytesRead
+            }
+
+            // Dispatch before close(): connection.close() fires
             // connectionLost() synchronously, which would otherwise race in
-            // with IO_ERROR and trigger the reconnect overlay.
-            onDisconnect(DisconnectReason.REMOTE_EOF)
+            // with IO_ERROR and trigger the wrong disconnect action.
+            onDisconnect(getDisconnectReasonForClosedSession(currentSession))
             close()
             throw IOException("Remote end closed connection")
         }
