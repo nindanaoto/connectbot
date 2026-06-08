@@ -294,6 +294,7 @@ class SettingsScreenTest {
                     onVolumeFontChange = {},
                     onKeepAliveChange = {},
                     onAlwaysVisibleChange = {},
+                    onImeToggleKeyChange = {},
                     onShiftFkeysChange = {},
                     onCtrlFkeysChange = {},
                     onStickyModifiersChange = {},
