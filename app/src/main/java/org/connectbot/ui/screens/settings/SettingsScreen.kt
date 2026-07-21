@@ -193,6 +193,7 @@ fun SettingsScreen(
         onVolumeFontChange = viewModel::updateVolumeFont,
         onKeepAliveChange = viewModel::updateKeepAlive,
         onAlwaysVisibleChange = viewModel::updateAlwaysVisible,
+        onImeToggleKeyChange = viewModel::updateImeToggleKey,
         onShiftFkeysChange = viewModel::updateShiftFkeys,
         onCtrlFkeysChange = viewModel::updateCtrlFkeys,
         onStickyModifiersChange = viewModel::updateStickyModifiers,
@@ -239,6 +240,7 @@ fun SettingsScreenContent(
     onVolumeFontChange: (Boolean) -> Unit,
     onKeepAliveChange: (Boolean) -> Unit,
     onAlwaysVisibleChange: (Boolean) -> Unit,
+    onImeToggleKeyChange: (Boolean) -> Unit,
     onShiftFkeysChange: (Boolean) -> Unit,
     onCtrlFkeysChange: (Boolean) -> Unit,
     onStickyModifiersChange: (String) -> Unit,
@@ -591,6 +593,15 @@ fun SettingsScreenContent(
                     summary = stringResource(R.string.pref_alwaysvisible_summary),
                     checked = uiState.alwaysvisible,
                     onCheckedChange = onAlwaysVisibleChange,
+                )
+            }
+
+            item {
+                SwitchPreference(
+                    title = stringResource(R.string.pref_imetogglekey_title),
+                    summary = stringResource(R.string.pref_imetogglekey_summary),
+                    checked = uiState.imeTogglekey,
+                    onCheckedChange = onImeToggleKeyChange,
                 )
             }
 
@@ -1603,6 +1614,7 @@ private fun SettingsScreenPreview() {
                 volumefont = true,
                 keepalive = true,
                 alwaysvisible = true,
+                imeTogglekey = true,
                 shiftfkeys = false,
                 ctrlfkeys = false,
                 stickymodifiers = "yes",
@@ -1649,6 +1661,7 @@ private fun SettingsScreenPreview() {
             onVolumeFontChange = {},
             onKeepAliveChange = {},
             onAlwaysVisibleChange = {},
+            onImeToggleKeyChange = {},
             onShiftFkeysChange = {},
             onCtrlFkeysChange = {},
             onStickyModifiersChange = {},
