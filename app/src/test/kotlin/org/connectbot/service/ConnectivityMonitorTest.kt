@@ -21,6 +21,9 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.wifi.WifiManager
+import android.os.Looper
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,6 +34,9 @@ import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 @RunWith(RobolectricTestRunner::class)
 class ConnectivityMonitorTest {
@@ -85,6 +91,22 @@ class ConnectivityMonitorTest {
 
         // Verify notification
         verify(terminalManager).onConnectivityLost(network, ipAddresses)
+    }
+
+    @Test
+    fun `init should query networks off the main thread`() {
+        val networkQuery = CountDownLatch(1)
+        val queriedOnMainThread = AtomicBoolean()
+        `when`(connectivityManager.allNetworks).thenAnswer {
+            queriedOnMainThread.set(Looper.getMainLooper().isCurrentThread)
+            networkQuery.countDown()
+            emptyArray<Network>()
+        }
+
+        connectivityMonitor.init()
+
+        assertTrue(networkQuery.await(5, TimeUnit.SECONDS))
+        assertFalse(queriedOnMainThread.get())
     }
 
     private fun anyString(): String = org.mockito.ArgumentMatchers.anyString()
