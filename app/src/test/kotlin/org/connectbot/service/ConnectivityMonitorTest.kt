@@ -22,6 +22,8 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.wifi.WifiManager
 import android.os.Looper
+import kotlinx.coroutines.Dispatchers
+import org.connectbot.di.CoroutineDispatchers
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -60,7 +62,12 @@ class ConnectivityMonitorTest {
         `when`(terminalManager.getSystemService(Context.WIFI_SERVICE)).thenReturn(wifiManager)
         `when`(wifiManager.createWifiLock(anyString())).thenReturn(mock(WifiManager.WifiLock::class.java))
 
-        connectivityMonitor = ConnectivityMonitor(terminalManager, false)
+        val dispatchers = CoroutineDispatchers(
+            default = Dispatchers.Default,
+            io = Dispatchers.IO,
+            main = Dispatchers.Main,
+        )
+        connectivityMonitor = ConnectivityMonitor(terminalManager, false, dispatchers)
     }
 
     @Test

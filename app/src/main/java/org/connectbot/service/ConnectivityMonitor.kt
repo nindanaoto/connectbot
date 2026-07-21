@@ -1,6 +1,6 @@
 /*
  * ConnectBot: simple, powerful, open-source SSH client for Android
- * Copyright 2025 Kenny Root
+ * Copyright 2025-2026 Kenny Root
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,11 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiManager.WifiLock
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import org.connectbot.di.CoroutineDispatchers
 import timber.log.Timber
 import java.util.concurrent.ConcurrentHashMap
 
@@ -36,7 +41,10 @@ import java.util.concurrent.ConcurrentHashMap
 class ConnectivityMonitor(
     private val terminalManager: TerminalManager,
     private var lockingWifi: Boolean,
+    dispatchers: CoroutineDispatchers,
 ) {
+    private val scope = CoroutineScope(SupervisorJob() + dispatchers.io)
+
     private val connectivityManager: ConnectivityManager = terminalManager.getSystemService(
         Context.CONNECTIVITY_SERVICE,
     ) as ConnectivityManager
@@ -130,9 +138,12 @@ class ConnectivityMonitor(
         connectivityManager.registerNetworkCallback(request, networkCallback)
         connectivityManager.registerDefaultNetworkCallback(defaultNetworkCallback)
 
-        // Initialize all active networks
-        for (network in connectivityManager.allNetworks) {
-            updateNetworkInfo(network)
+        scope.launch {
+            // Initialize all active networks off the main thread because each
+            // query may require a Binder transaction.
+            for (network in connectivityManager.allNetworks) {
+                updateNetworkInfo(network)
+            }
         }
     }
 
@@ -140,6 +151,8 @@ class ConnectivityMonitor(
      * Clean up resources and unregister the network callback.
      */
     fun cleanup() {
+        scope.cancel()
+
         try {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             connectivityManager.unregisterNetworkCallback(defaultNetworkCallback)

@@ -271,7 +271,7 @@ class TerminalManager :
 
         val lockingWifi = prefs.getBoolean(PreferenceConstants.WIFI_LOCK, true)
 
-        connectivityMonitor = ConnectivityMonitor(this, lockingWifi)
+        connectivityMonitor = ConnectivityMonitor(this, lockingWifi, dispatchers)
         connectivityMonitor.init()
 
         ProviderLoader.load(this, this)
