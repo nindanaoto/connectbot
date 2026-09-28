@@ -29,6 +29,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -87,6 +89,16 @@ import org.mockito.Mockito.`when`
 @HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class ConsoleScreenTest {
+    private class RecordingKeyboardController : SoftwareKeyboardController {
+        var hideCalls = 0
+
+        override fun show() = Unit
+
+        override fun hide() {
+            hideCalls++
+        }
+    }
+
     @get:Rule(order = 0)
     val hiltRule = HiltAndroidRule(this)
 
@@ -111,6 +123,7 @@ class ConsoleScreenTest {
         mockConsoleViewModel: ConsoleViewModel? = null,
         lifecycleOwner: LifecycleOwner = composeTestRule.activity,
         onAutomaticBack: () -> Unit = {},
+        keyboardController: SoftwareKeyboardController? = null,
     ) {
         composeTestRule.setContent {
             val context = LocalContext.current
@@ -123,6 +136,7 @@ class ConsoleScreenTest {
                 CompositionLocalProvider(
                     LocalTerminalManager provides mockTerminalManager,
                     LocalLifecycleOwner provides lifecycleOwner,
+                    LocalSoftwareKeyboardController provides keyboardController,
                 ) {
                     NavHost(navController = navController, startDestination = "start") {
                         composable("start") { Text("Host list") }
@@ -173,6 +187,23 @@ class ConsoleScreenTest {
         composeTestRule.runOnIdle {
             assertEquals("start", navController.currentDestination?.route)
         }
+    }
+
+    @Test
+    fun consoleScreen_emptyOnEntry_hidesKeyboardBeforeReturningToHostList() {
+        val viewModel = mock(ConsoleViewModel::class.java)
+        `when`(viewModel.uiState).thenReturn(MutableStateFlow(ConsoleUiState(isLoading = false)))
+        `when`(viewModel.networkStatusMessages).thenReturn(MutableSharedFlow())
+        val keyboardController = RecordingKeyboardController()
+        setContent(
+            mockConsoleViewModel = viewModel,
+            keyboardController = keyboardController,
+            onAutomaticBack = { assertEquals(1, keyboardController.hideCalls) },
+        )
+
+        navigateToConsoleScreen()
+
+        composeTestRule.onNodeWithText("Host list").assertIsDisplayed()
     }
 
     @Test
@@ -362,6 +393,22 @@ class ConsoleScreenTest {
 
         composeTestRule.runOnIdle {
             assertTrue(navController.currentBackStackEntry?.destination?.route == "start")
+        }
+    }
+
+    @Test
+    fun consoleScreen_backButtonHidesKeyboardBeforeNavigatingUp() {
+        val keyboardController = RecordingKeyboardController()
+        setContent(
+            keyboardController = keyboardController,
+            onAutomaticBack = { assertEquals(1, keyboardController.hideCalls) },
+        )
+        navigateToConsoleScreen()
+
+        composeTestRule.onNodeWithContentDescription("Back").performClick()
+
+        composeTestRule.runOnIdle {
+            assertEquals("start", navController.currentDestination?.route)
         }
     }
 
