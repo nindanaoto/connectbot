@@ -112,6 +112,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -548,6 +549,7 @@ fun ConsoleScreen(
     viewModel: ConsoleViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val softwareKeyboardController = LocalSoftwareKeyboardController.current
     val terminalManager = LocalTerminalManager.current
     val uiState by viewModel.uiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
@@ -583,6 +585,12 @@ fun ConsoleScreen(
     // Keyboard state
     val hasHardwareKeyboard = rememberHasHardwareKeyboard()
     var showSoftwareKeyboard by remember { mutableStateOf(!hasHardwareKeyboard) }
+
+    fun navigateBack() {
+        showSoftwareKeyboard = false
+        softwareKeyboardController?.hide()
+        currentOnNavigateBack()
+    }
 
     var rotation by remember(hasHardwareKeyboard) {
         val prefValue = prefs.getString(PreferenceConstants.ROTATION, PreferenceConstants.ROTATION_DEFAULT)
@@ -768,7 +776,7 @@ fun ConsoleScreen(
         if (uiState.bridges.isEmpty() && !uiState.isLoading &&
             lifecycle.currentState == Lifecycle.State.RESUMED
         ) {
-            currentOnNavigateBack()
+            navigateBack()
         }
     }
 
@@ -1200,7 +1208,7 @@ fun ConsoleScreen(
                         titleBarHeight = with(density) { it.height.toDp() }
                     },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = ::navigateBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             stringResource(R.string.button_back),
