@@ -604,6 +604,14 @@ tasks
         dependsOn(generateExportSchema)
     }
 
+// AGP exposes built-in Kotlin test directories through its Java source roots.
+// Register them as Kotlin inputs too, so KSP tracks changes and caches Hilt output.
+tasks.withType<com.google.devtools.ksp.gradle.KspAATask>().configureEach {
+    if (name.contains("UnitTest")) {
+        kspConfig.sourceRoots.from(kspConfig.javaSourceRoots)
+    }
+}
+
 // Keep KSP's generated Hilt test application on javac's source path even when
 // the generated directory does not exist yet in a clean build.
 tasks.withType<JavaCompile>().matching {
