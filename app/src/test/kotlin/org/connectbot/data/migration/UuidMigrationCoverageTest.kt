@@ -19,11 +19,14 @@ package org.connectbot.data.migration
 
 import android.content.Context
 import android.database.sqlite.SQLiteConstraintException
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.test.runTest
 import org.connectbot.data.ColorSchemePresets
 import org.connectbot.data.EntityIds
+import org.connectbot.data.entity.Fido2Transport
 import org.connectbot.util.HostConstants
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThrows
@@ -45,6 +48,52 @@ class UuidMigrationCoverageTest {
             it.create()
             it.verifyReopen()
         }
+    }
+
+    @Test
+    fun preservesLegacyFido2CredentialsAndStartupKeys() = runTest {
+        fixture().use { fixture ->
+            fixture.create(edit = ::addLegacyFido2Credentials)
+            val database = fixture.open(production = true)
+            fixture.verifyPreservation(database)
+            val keys = database.pubkeyDao().getAll()
+            val fido2 = keys.single { it.isFido2 }
+            assertArrayEquals(byteArrayOf(0, 1, -1), fido2.credentialId)
+            assertEquals("ssh:legacy", fido2.fido2RpId)
+            assertEquals(Fido2Transport.NFC, fido2.fido2Transport)
+            assertTrue(database.pubkeyDao().getStartupKeys().isNotEmpty())
+            database.openHelper.readableDatabase.query("SELECT name FROM sqlite_master WHERE name='_legacy_fido2_pubkeys'").use {
+                assertFalse(it.moveToFirst())
+            }
+            database.close()
+            fixture.verifyReopen(production = true)
+        }
+    }
+
+    @Test
+    fun preservesLegacyCredentialIdsWhenOptionalFido2FieldsAreAbsent() {
+        fixture().use { fixture ->
+            fixture.create { db ->
+                db.execSQL("ALTER TABLE pubkeys ADD COLUMN credential_id BLOB")
+                db.execSQL("UPDATE pubkeys SET credential_id=X'0001FF' WHERE id=1")
+            }
+            fixture.verifyReopen()
+        }
+    }
+
+    @Test
+    fun legacyFido2MigrationRollsBackWithoutLosingCredentialsAndCanRetry() {
+        fixture().use { fixture ->
+            fixture.create(edit = ::addLegacyFido2Credentials)
+            fixture.verifyRollback(UuidMigrationFixture.FailurePoint.COPY)
+        }
+    }
+
+    private fun addLegacyFido2Credentials(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE pubkeys ADD COLUMN credential_id BLOB")
+        db.execSQL("ALTER TABLE pubkeys ADD COLUMN fido2_rp_id TEXT")
+        db.execSQL("ALTER TABLE pubkeys ADD COLUMN fido2_transport TEXT")
+        db.execSQL("UPDATE pubkeys SET credential_id=X'0001FF', fido2_rp_id='ssh:legacy', fido2_transport='NFC', storage_type='FIDO2_RESIDENT_KEY' WHERE id=1")
     }
 
     @Test

@@ -25,6 +25,9 @@ import java.util.UUID
 
 /** Rebuild all identity columns in one SQLite transaction; preserve mappings for external preferences. */
 object UuidMigration : Migration(14, 15) {
+    private val legacyFido2Columns = listOf("credential_id", "fido2_rp_id", "fido2_transport")
+    private const val LEGACY_FIDO2_TABLE = "_legacy_fido2_pubkeys"
+
     override fun migrate(db: SupportSQLiteDatabase) {
         db.execSQL("PRAGMA defer_foreign_keys = ON")
         db.execSQL("CREATE TABLE IF NOT EXISTS legacy_id_map (entity TEXT NOT NULL, old_id INTEGER NOT NULL, uuid TEXT NOT NULL, PRIMARY KEY(entity, old_id))")
@@ -42,6 +45,7 @@ object UuidMigration : Migration(14, 15) {
             }
             mappings[table] = map
         }
+        preserveLegacyFido2Credentials(db)
         db.execSQL("CREATE TABLE IF NOT EXISTS `hosts_uuid` (`id` TEXT NOT NULL, `repository_id` TEXT NOT NULL DEFAULT 'b6ba8cb6-02d4-492d-8de9-5747abbf3b21', `temporary` INTEGER NOT NULL DEFAULT 0, `nickname` TEXT NOT NULL, `protocol` TEXT NOT NULL, `username` TEXT NOT NULL, `hostname` TEXT NOT NULL, `port` INTEGER NOT NULL, `host_key_algo` TEXT, `last_connect` INTEGER NOT NULL, `color` TEXT, `use_keys` INTEGER NOT NULL, `use_auth_agent` TEXT, `post_login` TEXT, `pubkey_id` TEXT NOT NULL, `want_session` INTEGER NOT NULL, `compression` INTEGER NOT NULL, `stay_connected` INTEGER NOT NULL, `quick_disconnect` INTEGER NOT NULL, `scrollback_lines` INTEGER NOT NULL, `use_ctrl_alt_as_meta_key` INTEGER NOT NULL, `jump_host_id` TEXT, `profile_id` TEXT, `ip_version` TEXT NOT NULL DEFAULT 'IPV4_AND_IPV6', `mosh_port` INTEGER NOT NULL DEFAULT 0, `mosh_network_timeout` INTEGER, `mosh_server` TEXT, `locale` TEXT NOT NULL DEFAULT 'en_US.UTF-8', `telnet_echo_mode` TEXT NOT NULL DEFAULT 'AUTO', `telnet_negotiation_mode` TEXT NOT NULL DEFAULT 'INTERACTIVE', `telnet_nonbinary_policy` TEXT NOT NULL DEFAULT 'EIGHT_BIT_COMPATIBILITY', `telnet_newline_policy` TEXT NOT NULL DEFAULT 'LF_TO_CRLF', PRIMARY KEY(`id`))")
         db.execSQL("CREATE TABLE IF NOT EXISTS `pubkeys_uuid` (`id` TEXT NOT NULL, `repository_id` TEXT NOT NULL DEFAULT 'b6ba8cb6-02d4-492d-8de9-5747abbf3b21', `nickname` TEXT NOT NULL, `type` TEXT NOT NULL, `private_key` BLOB, `public_key` BLOB NOT NULL, `encrypted` INTEGER NOT NULL, `startup` INTEGER NOT NULL, `confirmation` INTEGER NOT NULL, `created_date` INTEGER NOT NULL, `storage_type` TEXT NOT NULL, `allow_backup` INTEGER NOT NULL, `keystore_alias` TEXT, PRIMARY KEY(`id`))")
         db.execSQL("CREATE TABLE IF NOT EXISTS `port_forwards_uuid` (`id` TEXT NOT NULL, `repository_id` TEXT NOT NULL DEFAULT 'b6ba8cb6-02d4-492d-8de9-5747abbf3b21', `host_id` TEXT NOT NULL, `nickname` TEXT NOT NULL, `type` TEXT NOT NULL, `source_addr` TEXT NOT NULL DEFAULT 'localhost', `source_port` INTEGER NOT NULL, `dest_addr` TEXT, `dest_port` INTEGER NOT NULL, `start_enabled` INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(`id`), FOREIGN KEY(`host_id`) REFERENCES `hosts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )")
@@ -56,6 +60,9 @@ object UuidMigration : Migration(14, 15) {
                 while (cursor.moveToNext()) {
                     val values = ContentValues()
                     cursor.columnNames.forEachIndexed { index, column ->
+                        // Older development databases added these before the UUID migration.
+                        // Restore them after the version 19 migration creates the final columns.
+                        if (table == "pubkeys" && column in legacyFido2Columns) return@forEachIndexed
                         if (cursor.isNull(index)) {
                             values.putNull(column)
                         } else if (column == "id" && table != "automation_actions") {
@@ -104,5 +111,29 @@ object UuidMigration : Migration(14, 15) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_color_palette_scheme_id` ON `color_palette` (`scheme_id`)")
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_color_palette_scheme_id_color_index` ON `color_palette` (`scheme_id`, `color_index`)")
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_profiles_repository_id_name` ON `profiles` (`repository_id`, `name`)")
+    }
+
+    private fun preserveLegacyFido2Credentials(db: SupportSQLiteDatabase) {
+        val columns = db.query("PRAGMA table_info(pubkeys)").use { cursor ->
+            buildSet {
+                while (cursor.moveToNext()) add(cursor.getString(cursor.getColumnIndexOrThrow("name")))
+            }
+        }
+        if (legacyFido2Columns.none { it in columns }) return
+
+        db.execSQL("CREATE TABLE `$LEGACY_FIDO2_TABLE` (`id` TEXT NOT NULL PRIMARY KEY, `credential_id` BLOB, `fido2_rp_id` TEXT, `fido2_transport` TEXT)")
+        val fields = legacyFido2Columns.joinToString(", ") { if (it in columns) "p.`$it`" else "NULL" }
+        db.execSQL("INSERT INTO `$LEGACY_FIDO2_TABLE` SELECT m.uuid, $fields FROM pubkeys p JOIN legacy_id_map m ON m.entity='pubkeys' AND m.old_id=p.id")
+    }
+
+    fun restoreLegacyFido2Credentials(db: SupportSQLiteDatabase) {
+        val hasLegacyCredentials = db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='$LEGACY_FIDO2_TABLE'").use { it.moveToFirst() }
+        if (!hasLegacyCredentials) return
+
+        val assignments = legacyFido2Columns.joinToString(", ") {
+            "`$it` = (SELECT `$it` FROM `$LEGACY_FIDO2_TABLE` WHERE `$LEGACY_FIDO2_TABLE`.id=pubkeys.id)"
+        }
+        db.execSQL("UPDATE pubkeys SET $assignments WHERE id IN (SELECT id FROM `$LEGACY_FIDO2_TABLE`)")
+        db.execSQL("DROP TABLE `$LEGACY_FIDO2_TABLE`")
     }
 }

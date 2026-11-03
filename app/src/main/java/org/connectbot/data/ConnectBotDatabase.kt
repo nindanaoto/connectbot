@@ -120,11 +120,17 @@ import java.util.UUID
         AutoMigration(from = 15, to = 16, spec = CryptoPolicyMigration::class),
         AutoMigration(from = 16, to = 17, spec = ConnectBotDatabase.KeyboardMigration::class),
         AutoMigration(from = 17, to = 18, spec = ConnectBotDatabase.FontWeightMigration::class),
-        AutoMigration(from = 18, to = 19),
+        AutoMigration(from = 18, to = 19, spec = ConnectBotDatabase.Fido2Migration::class),
     ],
 )
 @TypeConverters(Converters::class)
 abstract class ConnectBotDatabase : RoomDatabase() {
+    class Fido2Migration : AutoMigrationSpec {
+        override fun onPostMigrate(db: SupportSQLiteDatabase) {
+            UuidMigration.restoreLegacyFido2Credentials(db)
+        }
+    }
+
     class FontWeightMigration : AutoMigrationSpec {
         override fun onPostMigrate(db: SupportSQLiteDatabase) {
             // Recreated on open so font weight edits participate in profile sync.
