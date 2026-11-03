@@ -67,6 +67,7 @@ import org.connectbot.data.entity.Host
 import org.connectbot.data.keyboard.KeyboardItem
 import org.connectbot.data.keyboard.KeyboardLayout
 import org.connectbot.data.keyboard.KeyboardRepository
+import org.connectbot.fido2.Fido2Manager
 import org.connectbot.service.DisconnectReason
 import org.connectbot.service.ModifierLevel
 import org.connectbot.service.ModifierState
@@ -128,6 +129,15 @@ class ConsoleScreenTest {
     fun tearDown() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         PreferenceManager.getDefaultSharedPreferences(context).edit().clear().commit()
+    }
+
+    private fun mockTerminalBridge(): TerminalBridge {
+        val bridge = mock(TerminalBridge::class.java)
+        val fido2Manager = mock(Fido2Manager::class.java)
+        `when`(fido2Manager.waitingForNfcSigning).thenReturn(MutableStateFlow(false))
+        `when`(bridge.fido2Manager).thenReturn(fido2Manager)
+        `when`(bridge.fontWeightFlow).thenReturn(MutableStateFlow(TerminalFontWeight.NORMAL))
+        return bridge
     }
 
     private fun setContent(
@@ -193,7 +203,7 @@ class ConsoleScreenTest {
         hostname: String = "test-host",
         isDisconnected: Boolean = false,
     ): TerminalBridge {
-        val bridge = mock(TerminalBridge::class.java)
+        val bridge = mockTerminalBridge()
         val host = Host(
             id = UUID(0, id),
             hostname = hostname,
@@ -216,7 +226,7 @@ class ConsoleScreenTest {
         val activeProfile = MutableStateFlow<TerminalBridge.ActiveProfile?>(profile)
         val emulator = TerminalEmulatorFactory.create()
         val dimensions = MutableStateFlow<TerminalDimensions?>(emulator.dimensions)
-        val bridge = mock(TerminalBridge::class.java)
+        val bridge = mockTerminalBridge()
         `when`(bridge.host).thenReturn(Host(id = UUID(0, 1), nickname = "first"))
         `when`(bridge.terminalEmulator).thenReturn(emulator)
         `when`(bridge.fontSizeFlow).thenReturn(size)
@@ -289,7 +299,7 @@ class ConsoleScreenTest {
             }
             composeTestRule.mainClock.advanceTimeBy(100)
             composeTestRule.onNodeWithContentDescription(composeTestRule.activity.getString(R.string.console_font_size_save_description)).assertIsDisplayed()
-            val other = mock(TerminalBridge::class.java)
+            val other = mockTerminalBridge()
             `when`(other.host).thenReturn(Host(id = UUID(0, 2), nickname = "second"))
             `when`(other.terminalEmulator).thenReturn(emulator)
             `when`(other.fontSizeFlow).thenReturn(MutableStateFlow(10f))
@@ -352,8 +362,8 @@ class ConsoleScreenTest {
 
     @Test
     fun sessionPicker_sameHostInTwoSessions_rendersAndSelectsEachSession() {
-        val first = mock(TerminalBridge::class.java)
-        val second = mock(TerminalBridge::class.java)
+        val first = mockTerminalBridge()
+        val second = mockTerminalBridge()
         val host = Host(id = UUID(0, 1), nickname = "Original session")
         `when`(first.sessionId).thenReturn(10L)
         `when`(second.sessionId).thenReturn(20L)
@@ -408,7 +418,7 @@ class ConsoleScreenTest {
 
     @Test
     fun consoleScreen_remoteDisconnect_showsReconnectAfterBridgeStateChanges() {
-        val bridge = mock(TerminalBridge::class.java)
+        val bridge = mockTerminalBridge()
         `when`(bridge.transportMessages).thenReturn(MutableSharedFlow())
         `when`(bridge.keyboardErrors).thenReturn(MutableSharedFlow())
         val host = Host(id = UUID(0, 1), nickname = "test-host")
@@ -696,7 +706,7 @@ class ConsoleScreenTest {
             keyboardRepository.setDefault(layout.id)
             original
         }
-        val bridge = mock(TerminalBridge::class.java)
+        val bridge = mockTerminalBridge()
         val emulator = TerminalEmulatorFactory.create()
         `when`(bridge.host).thenReturn(Host(isTemporary = true, nickname = "Text input"))
         `when`(bridge.terminalEmulator).thenReturn(emulator)
@@ -745,7 +755,7 @@ class ConsoleScreenTest {
             keyboardRepository.setDefault(layout.id)
             original
         }
-        val bridge = mock(TerminalBridge::class.java)
+        val bridge = mockTerminalBridge()
         val emulator = TerminalEmulatorFactory.create()
         `when`(bridge.host).thenReturn(Host(isTemporary = true, nickname = "Text input"))
         `when`(bridge.terminalEmulator).thenReturn(emulator)
@@ -990,7 +1000,7 @@ class ConsoleScreenTest {
 
     @Test
     fun consoleScreen_connectionInfoMenu_opensAndDismissesPanel() {
-        val bridge = mock(TerminalBridge::class.java)
+        val bridge = mockTerminalBridge()
         `when`(bridge.transportMessages).thenReturn(MutableSharedFlow())
         `when`(bridge.keyboardErrors).thenReturn(MutableSharedFlow())
         val host = Host(id = UUID(0, 1), nickname = "test-host", hostname = "server.example")
